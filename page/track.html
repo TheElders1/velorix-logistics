@@ -224,10 +224,62 @@ function googleTranslateElementInit() {
 
 						<div id="tracking-error" class="alert alert-danger" style="display:none;"></div>
 
-						<div id="tracking-loading" style="display:none;" class="text-center py-5">
-							<div class="spinner-border text-primary" role="status" style="width:3rem;height:3rem;"></div>
-							<p class="mt-3 text-secondary mb-0">Fetching shipment details...</p>
+						<div id="tracking-loading" style="display:none;">
+							<div class="vlx-pipeline-screen">
+								<div class="vlx-pipeline-icon">🌐</div>
+								<h4 class="vlx-pipeline-title">Accessing Database Link...</h4>
+								<p id="vlx-pipeline-status" class="vlx-pipeline-status">Initializing connection pipeline...</p>
+								<div class="vlx-pipeline-track">
+									<div id="vlx-pipeline-fill" class="vlx-pipeline-fill"></div>
+								</div>
+							</div>
 						</div>
+
+						<style>
+							.vlx-pipeline-screen {
+								padding: 40px 20px;
+								text-align: center;
+							}
+							.vlx-pipeline-icon {
+								font-size: 40px;
+								margin-bottom: 16px;
+								animation: vlxPulseIcon 1.6s ease-in-out infinite;
+							}
+							@keyframes vlxPulseIcon {
+								0%, 100% { transform: scale(1); opacity: 1; }
+								50% { transform: scale(1.15); opacity: 0.7; }
+							}
+							.vlx-pipeline-title {
+								font-size: 16px;
+								font-weight: 700;
+								color: #2D3748;
+								margin-bottom: 6px;
+							}
+							.vlx-pipeline-status {
+								font-size: 14px;
+								color: #007bff;
+								font-weight: 600;
+								height: 20px;
+								margin-bottom: 20px;
+								transition: opacity 0.2s;
+							}
+							.vlx-pipeline-track {
+								width: 80%;
+								max-width: 280px;
+								margin: 0 auto;
+								background: #e9ecef;
+								height: 8px;
+								border-radius: 20px;
+								overflow: hidden;
+							}
+							.vlx-pipeline-fill {
+								height: 100%;
+								width: 0%;
+								background: linear-gradient(90deg, #E04A3A, #ff6b6b);
+								border-radius: 20px;
+								transition: width 0.35s ease-out;
+							}
+						</style>
 
 						<div id="tracking-result" style="display:none;" class="d-flex flex-column gap-20">
 
@@ -369,6 +421,10 @@ function googleTranslateElementInit() {
 								width: 100%;
 							}
 							.btn-track-more:hover { background: #c73f31; color: #fff; }
+							@keyframes vlxSlideUp {
+								from { opacity: 0; transform: translateY(20px); }
+								to { opacity: 1; transform: translateY(0); }
+							}
 						</style>
 
 					</div>
@@ -853,6 +909,34 @@ function renderStatusAndProgress(shipment) {
     if (status === 'delayed') fillEl.classList.add('is-delayed');
 }
 
+const PIPELINE_STEPS = [
+    { pct: 15, text: "Getting unique entry tracking ID..." },
+    { pct: 40, text: "Getting origin & destination paths..." },
+    { pct: 65, text: "Getting latest localized hub data..." },
+    { pct: 85, text: "Loading mapping interface layout..." },
+    { pct: 100, text: "Finalizing data array formatting..." }
+];
+
+function startPipelineAnimation() {
+    let step = 0;
+    const fill = document.getElementById('vlx-pipeline-fill');
+    const status = document.getElementById('vlx-pipeline-status');
+
+    function tick() {
+        if (step >= PIPELINE_STEPS.length) return;
+        const s = PIPELINE_STEPS[step];
+        status.style.opacity = '0';
+        setTimeout(function() {
+            status.textContent = s.text;
+            status.style.opacity = '1';
+            fill.style.width = s.pct + '%';
+        }, 150);
+        step++;
+        if (step < PIPELINE_STEPS.length) setTimeout(tick, 900);
+    }
+    tick();
+}
+
 document.getElementById('tracking-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const btn = document.getElementById('tracking-submit-btn');
@@ -864,18 +948,35 @@ document.getElementById('tracking-form').addEventListener('submit', async functi
 
     errorBox.style.display = 'none';
     resultBox.style.display = 'none';
+
+    // Reset pipeline
+    document.getElementById('vlx-pipeline-fill').style.width = '0%';
+    document.getElementById('vlx-pipeline-status').textContent = 'Initializing connection pipeline...';
     loadingBox.style.display = 'block';
+
     btn.disabled = true;
     spinner.classList.remove('d-none');
     btnText.textContent = 'Searching...';
 
+    // Run animation + Supabase fetch in parallel
+    startPipelineAnimation();
+
     const trackingId = document.getElementById('InputProduct').value.trim();
+
+    // Wait minimum 4.5s so the pipeline animation completes before revealing result
+    const fetchStart = Date.now();
+    const MIN_DURATION = 4500;
 
     const { data: shipment, error } = await trackingSupabase
         .from('shipments')
         .select('*')
         .eq('tracking_number', trackingId)
         .maybeSingle();
+
+    const elapsed = Date.now() - fetchStart;
+    const remaining = Math.max(0, MIN_DURATION - elapsed);
+
+    await new Promise(resolve => setTimeout(resolve, remaining));
 
     loadingBox.style.display = 'none';
     btn.disabled = false;
@@ -933,6 +1034,9 @@ document.getElementById('tracking-form').addEventListener('submit', async functi
     }
 
     resultBox.style.display = 'flex';
+    resultBox.style.animation = 'none';
+    resultBox.offsetHeight; // force reflow
+    resultBox.style.animation = 'vlxSlideUp 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards';
 
     // Render / update map
     if (shipment.current_lat && shipment.current_lng) {
