@@ -230,12 +230,52 @@ function googleTranslateElementInit() {
 						</div>
 
 						<div id="tracking-result" style="display:none;" class="d-flex flex-column gap-20">
+
+							<div id="tracking-banner" class="tracking-banner">
+								<span id="tracking-banner-icon" class="tracking-banner-icon"></span>
+								<div>
+									<div id="tracking-banner-status" class="tracking-banner-status"></div>
+									<div id="tracking-banner-sub" class="tracking-banner-sub text-muted"></div>
+								</div>
+							</div>
+
+							<div id="tracking-timeline" class="tracking-timeline">
+								<div class="tracking-timeline-track">
+									<div id="tracking-timeline-fill" class="tracking-timeline-fill"></div>
+								</div>
+								<div class="tracking-timeline-steps">
+									<div class="tracking-step" data-step="0">
+										<div class="tracking-step-icon">
+											<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
+										</div>
+										<div class="tracking-step-label">Order Placed</div>
+									</div>
+									<div class="tracking-step" data-step="1">
+										<div class="tracking-step-icon">
+											<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="7" width="15" height="10" rx="1"/><path d="M16 10h4l3 3v4h-7z"/><circle cx="6" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg>
+										</div>
+										<div class="tracking-step-label">In Transit</div>
+									</div>
+									<div class="tracking-step" data-step="2">
+										<div class="tracking-step-icon">
+											<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-7-7 18-2-8-9-3z"/></svg>
+										</div>
+										<div class="tracking-step-label">Out for Delivery</div>
+									</div>
+									<div class="tracking-step" data-step="3">
+										<div class="tracking-step-icon">
+											<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+										</div>
+										<div class="tracking-step-label">Delivered</div>
+									</div>
+								</div>
+							</div>
+
 							<div class="row g-3">
-								<div class="col-6"><strong>Status:</strong> <span id="res-status"></span></div>
 								<div class="col-6"><strong>Tracking #:</strong> <span id="res-tracking-number"></span></div>
+								<div class="col-6"><strong>Est. Delivery:</strong> <span id="res-eta"></span></div>
 								<div class="col-6"><strong>Origin:</strong> <span id="res-origin"></span></div>
 								<div class="col-6"><strong>Destination:</strong> <span id="res-destination"></span></div>
-								<div class="col-6"><strong>Est. Delivery:</strong> <span id="res-eta"></span></div>
 								<div class="col-6"><strong>Weight:</strong> <span id="res-weight"></span></div>
 							</div>
 							<div id="tracking-map" style="height:400px; width:100%; border-radius:8px;"></div>
@@ -244,6 +284,64 @@ function googleTranslateElementInit() {
 								<ul id="res-history" class="list-unstyled d-flex flex-column gap-10"></ul>
 							</div>
 						</div>
+
+						<style>
+							.tracking-banner {
+								display: flex; align-items: center; gap: 14px;
+								padding: 16px 18px; border-radius: 10px;
+								background: #f5f7fa; border-left: 4px solid #6c757d;
+							}
+							.tracking-banner.status-in_transit, .tracking-banner.status-pending { border-left-color: #0d6efd; background: #eef5ff; }
+							.tracking-banner.status-out_for_delivery { border-left-color: #fd7e14; background: #fff6ec; }
+							.tracking-banner.status-delivered { border-left-color: #198754; background: #eefaf1; }
+							.tracking-banner.status-delayed { border-left-color: #dc3545; background: #fdeeee; }
+							.tracking-banner.status-cancelled { border-left-color: #343a40; background: #f0f0f0; }
+							.tracking-banner-icon { font-size: 26px; line-height: 1; }
+							.tracking-banner-status { font-weight: 700; font-size: 17px; text-transform: capitalize; }
+							.tracking-banner-sub { font-size: 13px; }
+
+							.tracking-timeline { padding: 10px 4px 0; }
+							.tracking-timeline-track {
+								position: relative; height: 4px; background: #e6e9ee; border-radius: 4px;
+								margin: 0 22px 14px;
+							}
+							.tracking-timeline-fill {
+								position: absolute; top: 0; left: 0; height: 100%; width: 0%;
+								background: linear-gradient(90deg,#0d6efd,#3ba7f0);
+								border-radius: 4px;
+								transition: width 0.8s ease;
+							}
+							.tracking-timeline-fill.is-delayed { background: linear-gradient(90deg,#dc3545,#f0868f); }
+							.tracking-timeline-steps { display: flex; justify-content: space-between; }
+							.tracking-step { display: flex; flex-direction: column; align-items: center; flex: 1; text-align: center; }
+							.tracking-step-icon {
+								width: 40px; height: 40px; border-radius: 50%;
+								background: #fff; border: 2px solid #e6e9ee; color: #b6bcc4;
+								display: flex; align-items: center; justify-content: center;
+								margin-bottom: 8px; transition: all 0.4s ease;
+							}
+							.tracking-step.is-complete .tracking-step-icon {
+								background: #0d6efd; border-color: #0d6efd; color: #fff;
+							}
+							.tracking-step.is-current .tracking-step-icon {
+								background: #fff; border-color: #0d6efd; color: #0d6efd;
+								box-shadow: 0 0 0 5px rgba(13,110,253,0.15);
+								animation: trackingPulse 1.6s infinite;
+							}
+							.tracking-step.is-delayed .tracking-step-icon {
+								border-color: #dc3545; color: #dc3545;
+								box-shadow: 0 0 0 5px rgba(220,53,69,0.15);
+							}
+							.tracking-step-label { font-size: 12px; color: #6c757d; max-width: 80px; }
+							.tracking-step.is-complete .tracking-step-label,
+							.tracking-step.is-current .tracking-step-label { color: #212529; font-weight: 600; }
+
+							@keyframes trackingPulse {
+								0% { box-shadow: 0 0 0 5px rgba(13,110,253,0.15); }
+								50% { box-shadow: 0 0 0 9px rgba(13,110,253,0.06); }
+								100% { box-shadow: 0 0 0 5px rgba(13,110,253,0.15); }
+							}
+						</style>
 
 					</div>
 					<!-- cost-calculate -->
@@ -669,6 +767,63 @@ const trackingSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABL
 
 let trackingMap = null;
 
+const TRACKING_STEPS = ['pending', 'in_transit', 'out_for_delivery', 'delivered'];
+const STATUS_ICONS = {
+    pending: '📦', in_transit: '🚚', out_for_delivery: '🛵',
+    delivered: '✅', delayed: '⚠️', cancelled: '✕'
+};
+const STATUS_LABELS = {
+    pending: 'Order Placed', in_transit: 'In Transit', out_for_delivery: 'Out for Delivery',
+    delivered: 'Delivered', delayed: 'Delayed', cancelled: 'Cancelled'
+};
+
+function renderTrackingBanner(status) {
+    const banner = document.getElementById('tracking-banner');
+    banner.className = 'tracking-banner status-' + status;
+    document.getElementById('tracking-banner-icon').textContent = STATUS_ICONS[status] || '📦';
+    document.getElementById('tracking-banner-status').textContent = STATUS_LABELS[status] || status;
+
+    let sub = '';
+    if (status === 'delayed') sub = 'This shipment is experiencing a delay. We appreciate your patience.';
+    else if (status === 'cancelled') sub = 'This shipment has been cancelled.';
+    else if (status === 'delivered') sub = 'Your package has been delivered. Thank you for choosing Velorix.';
+    else sub = 'Your package is on its way — tracking updates in real time.';
+    document.getElementById('tracking-banner-sub').textContent = sub;
+}
+
+function renderTrackingTimeline(status) {
+    const timelineEl = document.getElementById('tracking-timeline');
+    const fillEl = document.getElementById('tracking-timeline-fill');
+    const steps = timelineEl.querySelectorAll('.tracking-step');
+
+    if (status === 'cancelled') {
+        timelineEl.style.opacity = '0.4';
+        fillEl.style.width = '0%';
+        steps.forEach(s => s.classList.remove('is-complete', 'is-current', 'is-delayed'));
+        return;
+    }
+    timelineEl.style.opacity = '1';
+
+    // Delayed shipments still show progress up to "in_transit" but flagged red
+    const effectiveStatus = status === 'delayed' ? 'in_transit' : status;
+    const idx = TRACKING_STEPS.indexOf(effectiveStatus);
+    const activeIdx = idx === -1 ? 0 : idx;
+    const fillPercent = (activeIdx / (TRACKING_STEPS.length - 1)) * 100;
+
+    fillEl.style.width = fillPercent + '%';
+    fillEl.classList.toggle('is-delayed', status === 'delayed');
+
+    steps.forEach(function(stepEl) {
+        const stepIdx = parseInt(stepEl.dataset.step, 10);
+        stepEl.classList.remove('is-complete', 'is-current', 'is-delayed');
+        if (stepIdx < activeIdx) {
+            stepEl.classList.add('is-complete');
+        } else if (stepIdx === activeIdx) {
+            stepEl.classList.add(status === 'delayed' ? 'is-delayed' : 'is-current');
+        }
+    });
+}
+
 document.getElementById('tracking-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const btn = document.getElementById('tracking-submit-btn');
@@ -705,12 +860,14 @@ document.getElementById('tracking-form').addEventListener('submit', async functi
     }
 
     // Populate result fields
-    document.getElementById('res-status').textContent = shipment.status;
     document.getElementById('res-tracking-number').textContent = shipment.tracking_number;
     document.getElementById('res-origin').textContent = shipment.origin || '—';
     document.getElementById('res-destination').textContent = shipment.destination || '—';
     document.getElementById('res-eta').textContent = shipment.estimated_delivery || '—';
     document.getElementById('res-weight').textContent = shipment.weight_kg ? shipment.weight_kg + ' kg' : '—';
+
+    renderTrackingBanner(shipment.status);
+    renderTrackingTimeline(shipment.status);
 
     // Fetch tracking history
     const { data: history } = await trackingSupabase
