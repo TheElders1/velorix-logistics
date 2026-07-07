@@ -6,8 +6,8 @@
 of our customers. We are dedicated in creating added value for our
 customers by implementing modern technology in our work. That is why the desire of
 constant improvement is the driving force behind our transportation business.">
-    <title>Transworld Logistics Services</title>
-    <link rel="shortcut icon" type="images/png" href="https://transworldltd.online/logistip/assets/images/fav-icon/favicon.ico">
+    <title>Velorix Logistics Services</title>
+    <link rel="shortcut icon" type="images/png" href="https://velorixlogistics.org/logistip/assets/images/fav-icon/favicon.ico">
     <meta name="robots" content="index, follow">
 <link href="../dashboard/logo.png" rel="icon">
 
@@ -15,9 +15,9 @@ constant improvement is the driving force behind our transportation business.">
 of our customers. We are dedicated in creating added value for our
 customers by implementing modern technology in our work. That is why the desire of
 constant improvement is the driving force behind our transportation business.">
-<meta property="og:title" content="Track parcel and shipments-Transworld Logistics Services">
+<meta property="og:title" content="Track parcel and shipments-Velorix Logistics Services">
 
-<meta property="og:url" content="https://transworldltd.online/index.php/page/track">
+<meta property="og:url" content="https://velorixlogistics.org/index.php/page/track">
 
 <meta property="og:description" content="We believe that the services offered by us should satisfy the high expectations
 of our customers. We are dedicated in creating added value for our
@@ -54,7 +54,7 @@ constant improvement is the driving force behind our transportation business.">
                 <div class="container">
                     <a class="navbar-brand py-2 py-xl-0" href="../index.html">
                         <span class="logo">
-                            <img src="../dashboard/logo.png" alt="Transworld Logistics Services">
+                            <img src="../dashboard/logo.png" alt="Velorix Logistics Services">
                         </span>
                     </a>
                     <a href="#" class="logistics-toggler-icon text-decoration-none d-block d-xl-none" data-bs-toggle="offcanvas" data-bs-target="#logisticsNavbar" aria-controls="logisticsNavbar" aria-label="Toggle navigation">
@@ -109,7 +109,7 @@ constant improvement is the driving force behind our transportation business.">
                 <div class="offcanvas-header">
                     <span class="offcanvas-title" id="logisticsNavbarLabel">
                         <span class="logo">
-                            <img src="../dashboard/logo.png" alt="Transworld Logistics Services">
+                            <img src="../dashboard/logo.png" alt="Velorix Logistics Services">
                         </span>
                     </span>
                     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -200,14 +200,14 @@ function googleTranslateElementInit() {
 				<div class="col-lg-7">
 					<div class="cost-calculate shadow d-flex flex-column gap-30">
 						<h3 class="mb-0 cost-calculate-title">Track Product <span class="text-primary">Status</span> and Delivery Informations</h3>
-						<form action="/tracking" method="POST" class="d-flex flex-column gap-30">
-							<input type="hidden" name="csrf_test_name" value="3e1d7b7fe22ffa946314e3790380c3cd">							<div class="row ">
+						<form id="tracking-form" class="d-flex flex-column gap-30">
+							<div class="row ">
 																<div class="col-12">
 									<div class="position-relative">
 										<label for="InputProduct" class="form-label text-secondary fw-medium d-flex flex-column flex-sm-row align-items-sm-center justify-content-between">
 											<span>Enter Tracking Code</span>
 										</label>
-										<input type="text" class="form-control form-control-xl" name="tracking_id" id="InputProduct" placeholder="Enter commodity type or HS code" required="">
+										<input type="text" class="form-control form-control-xl" name="tracking_id" id="InputProduct" placeholder="e.g. VLX-1000001" required="">
 										<span class="form-icon form-icon-left form-search-icon">
 											<svg width="16" height="16">
 												<use xlink:href="#form-search-icon"></use>
@@ -216,8 +216,26 @@ function googleTranslateElementInit() {
 									</div>
 								</div>
 							</div>
-							<button type="submit" class="btn btn-primary w-100">Next</button>
+							<button type="submit" class="btn btn-primary w-100" id="tracking-submit-btn">Next</button>
 						</form>
+
+						<div id="tracking-error" class="alert alert-danger" style="display:none;"></div>
+
+						<div id="tracking-result" style="display:none;" class="d-flex flex-column gap-20">
+							<div class="row g-3">
+								<div class="col-6"><strong>Status:</strong> <span id="res-status"></span></div>
+								<div class="col-6"><strong>Tracking #:</strong> <span id="res-tracking-number"></span></div>
+								<div class="col-6"><strong>Origin:</strong> <span id="res-origin"></span></div>
+								<div class="col-6"><strong>Destination:</strong> <span id="res-destination"></span></div>
+								<div class="col-6"><strong>Est. Delivery:</strong> <span id="res-eta"></span></div>
+								<div class="col-6"><strong>Weight:</strong> <span id="res-weight"></span></div>
+							</div>
+							<div id="tracking-map" style="height:400px; width:100%; border-radius:8px;"></div>
+							<div>
+								<h5 class="mb-10">Tracking History</h5>
+								<ul id="res-history" class="list-unstyled d-flex flex-column gap-10"></ul>
+							</div>
+						</div>
 
 					</div>
 					<!-- cost-calculate -->
@@ -623,6 +641,7 @@ function googleTranslateElementInit() {
     <!-- pages -->
 
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../logistip/assets/js/jquery-3.7.0.min.js"></script>
     <script src="../logistip/assets/js/bootstrap.bundle.min.js"></script>
     <script src="../logistip/assets/js/swiper-bundle.min.js"></script>
@@ -634,6 +653,105 @@ function googleTranslateElementInit() {
     <script src="../logistip/assets/js/leaflet.js"></script>
     <script src="../logistip/assets/js/leaflet-routing-machine.min.js"></script>
     <script src="../logistip/assets/js/leaflet-scripts.js"></script>
+
+    <script>
+const SUPABASE_URL = "https://vqhkwwsceqcusxuykfea.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_VyGKi58RF8ZeuaoXqoOYcg_k39PaSz8";
+const trackingSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+let trackingMap = null;
+
+document.getElementById('tracking-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('tracking-submit-btn');
+    const errorBox = document.getElementById('tracking-error');
+    const resultBox = document.getElementById('tracking-result');
+    errorBox.style.display = 'none';
+    resultBox.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Searching...';
+
+    const trackingId = document.getElementById('InputProduct').value.trim();
+
+    const { data: shipment, error } = await trackingSupabase
+        .from('shipments')
+        .select('*')
+        .eq('tracking_number', trackingId)
+        .maybeSingle();
+
+    btn.disabled = false;
+    btn.textContent = 'Next';
+
+    if (error || !shipment) {
+        errorBox.textContent = 'No shipment found for that tracking number. Please check and try again.';
+        errorBox.style.display = 'block';
+        return;
+    }
+
+    // Populate result fields
+    document.getElementById('res-status').textContent = shipment.status;
+    document.getElementById('res-tracking-number').textContent = shipment.tracking_number;
+    document.getElementById('res-origin').textContent = shipment.origin || '—';
+    document.getElementById('res-destination').textContent = shipment.destination || '—';
+    document.getElementById('res-eta').textContent = shipment.estimated_delivery || '—';
+    document.getElementById('res-weight').textContent = shipment.weight_kg ? shipment.weight_kg + ' kg' : '—';
+
+    // Fetch tracking history
+    const { data: history } = await trackingSupabase
+        .from('tracking_history')
+        .select('*')
+        .eq('shipment_id', shipment.id)
+        .order('created_at', { ascending: true });
+
+    const historyList = document.getElementById('res-history');
+    historyList.innerHTML = '';
+    (history || []).forEach(function(h) {
+        const li = document.createElement('li');
+        const when = new Date(h.created_at).toLocaleString();
+        li.textContent = when + ' — ' + h.status + (h.location ? ' (' + h.location + ')' : '') + (h.note ? ': ' + h.note : '');
+        historyList.appendChild(li);
+    });
+
+    resultBox.style.display = 'flex';
+
+    // Render / update map
+    if (shipment.current_lat && shipment.current_lng) {
+        if (!trackingMap) {
+            trackingMap = L.map('tracking-map').setView([shipment.current_lat, shipment.current_lng], 6);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(trackingMap);
+        } else {
+            trackingMap.setView([shipment.current_lat, shipment.current_lng], 6);
+        }
+
+        // Clear old markers/layers
+        trackingMap.eachLayer(function(layer) {
+            if (layer instanceof L.Marker || layer instanceof L.Routing.Control) {
+                trackingMap.removeLayer(layer);
+            }
+        });
+
+        L.marker([shipment.current_lat, shipment.current_lng])
+            .addTo(trackingMap)
+            .bindPopup('Current location — ' + shipment.status)
+            .openPopup();
+
+        if (shipment.origin_lat && shipment.origin_lng) {
+            L.marker([shipment.origin_lat, shipment.origin_lng])
+                .addTo(trackingMap)
+                .bindPopup('Origin: ' + (shipment.origin || ''));
+        }
+        if (shipment.destination_lat && shipment.destination_lng) {
+            L.marker([shipment.destination_lat, shipment.destination_lng])
+                .addTo(trackingMap)
+                .bindPopup('Destination: ' + (shipment.destination || ''));
+        }
+
+        setTimeout(function() { trackingMap.invalidateSize(); }, 100);
+    }
+});
+</script>
     <!-- map -->
 
     <script src="../logistip/assets/js/jquery.progressScroll.min.js"></script>
