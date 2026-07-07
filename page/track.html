@@ -231,116 +231,144 @@ function googleTranslateElementInit() {
 
 						<div id="tracking-result" style="display:none;" class="d-flex flex-column gap-20">
 
-							<div id="tracking-banner" class="tracking-banner">
-								<span id="tracking-banner-icon" class="tracking-banner-icon"></span>
-								<div>
-									<div id="tracking-banner-status" class="tracking-banner-status"></div>
-									<div id="tracking-banner-sub" class="tracking-banner-sub text-muted"></div>
-								</div>
-							</div>
-
-							<div id="tracking-timeline" class="tracking-timeline">
-								<div class="tracking-timeline-track">
-									<div id="tracking-timeline-fill" class="tracking-timeline-fill"></div>
-								</div>
-								<div class="tracking-timeline-steps">
-									<div class="tracking-step" data-step="0">
-										<div class="tracking-step-icon">
-											<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
-										</div>
-										<div class="tracking-step-label">Order Placed</div>
+							<!-- Status banner + progress bar -->
+							<div class="vlx-track-header">
+								<div id="vlx-status-banner" class="vlx-status-banner"></div>
+								<div class="vlx-progress-timeline">
+									<div class="vlx-timeline-labels">
+										<span>Received by Velorix Logistics Services<br><small id="vlx-ship-date">—</small></span>
+										<span class="text-right">Expected Delivery Date<br><small id="vlx-eta-date">—</small></span>
 									</div>
-									<div class="tracking-step" data-step="1">
-										<div class="tracking-step-icon">
-											<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="7" width="15" height="10" rx="1"/><path d="M16 10h4l3 3v4h-7z"/><circle cx="6" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg>
-										</div>
-										<div class="tracking-step-label">In Transit</div>
-									</div>
-									<div class="tracking-step" data-step="2">
-										<div class="tracking-step-icon">
-											<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-7-7 18-2-8-9-3z"/></svg>
-										</div>
-										<div class="tracking-step-label">Out for Delivery</div>
-									</div>
-									<div class="tracking-step" data-step="3">
-										<div class="tracking-step-icon">
-											<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-										</div>
-										<div class="tracking-step-label">Delivered</div>
+									<div class="vlx-progress-track">
+										<div id="vlx-progress-fill" class="vlx-progress-fill"></div>
+										<div id="vlx-progress-thumb" class="vlx-progress-thumb"></div>
 									</div>
 								</div>
 							</div>
 
-							<div class="row g-3">
-								<div class="col-6"><strong>Tracking #:</strong> <span id="res-tracking-number"></span></div>
-								<div class="col-6"><strong>Est. Delivery:</strong> <span id="res-eta"></span></div>
-								<div class="col-6"><strong>Origin:</strong> <span id="res-origin"></span></div>
-								<div class="col-6"><strong>Destination:</strong> <span id="res-destination"></span></div>
-								<div class="col-6"><strong>Weight:</strong> <span id="res-weight"></span></div>
+							<!-- Contact us card -->
+							<div class="vlx-card">
+								<h3>Contact us</h3>
+								<hr>
+								<p><strong>Address:</strong> Nigeria</p>
+								<p><strong>Email:</strong> support@velorixlogistics.org</p>
+								<p><strong>Phone:</strong> Contact us via email</p>
 							</div>
-							<div id="tracking-map" style="height:400px; width:100%; border-radius:8px;"></div>
-							<div>
-								<h5 class="mb-10">Tracking History</h5>
-								<ul id="res-history" class="list-unstyled d-flex flex-column gap-10"></ul>
+
+							<!-- Shipping details: sender / receiver -->
+							<div class="vlx-card">
+								<div class="vlx-address-grid">
+									<div>
+										<h4>From: <span id="vlx-sender-name">—</span></h4>
+										<p id="vlx-sender-address" class="mb-1"></p>
+										<p id="vlx-sender-email" class="mb-1"></p>
+										<p id="vlx-sender-phone" class="mb-0"></p>
+									</div>
+									<div>
+										<h4>To: <span id="vlx-receiver-name">—</span></h4>
+										<p id="vlx-receiver-address" class="mb-1"></p>
+										<p id="vlx-receiver-email" class="mb-1"></p>
+										<p id="vlx-receiver-phone" class="mb-0"></p>
+									</div>
+								</div>
 							</div>
+
+							<!-- Tracking data table -->
+							<div class="vlx-card">
+								<div class="vlx-table-row"><span>Tracking ID:</span><strong id="vlx-tid"></strong></div>
+								<div class="vlx-table-row"><span>Description:</span><span id="vlx-description">—</span></div>
+								<div class="vlx-table-row"><span>Status:</span><span id="vlx-status-highlight" class="vlx-status-highlight"></span></div>
+								<div class="vlx-table-row"><span>Shipped from:</span><span id="vlx-origin"></span></div>
+								<div class="vlx-table-row"><span>Shipped to:</span><span id="vlx-destination"></span></div>
+								<div class="vlx-table-row"><span>Expected Date of Delivery:</span><span id="vlx-eta-2"></span></div>
+								<div class="vlx-table-row"><span>Date of Shipment:</span><span id="vlx-shipdate-2"></span></div>
+								<div class="vlx-table-row"><span>Shipped by:</span><span>Velorix Logistics Services</span></div>
+							</div>
+
+							<!-- Map & location history -->
+							<div class="vlx-card">
+								<h3>Location history</h3>
+								<div id="tracking-map" style="height:320px; width:100%; border-radius:8px; margin: 14px 0;"></div>
+								<div id="vlx-live-timeline"></div>
+							</div>
+
+							<button type="button" class="btn-track-more" id="track-another-btn">Track another item</button>
 						</div>
 
 						<style>
-							.tracking-banner {
-								display: flex; align-items: center; gap: 14px;
-								padding: 16px 18px; border-radius: 10px;
-								background: #f5f7fa; border-left: 4px solid #6c757d;
+							:root {
+								--vlx-accent: #E04A3A;
+								--vlx-text: #2D3748;
+								--vlx-muted: #718096;
+								--vlx-bg-off: #F7FAFC;
 							}
-							.tracking-banner.status-in_transit, .tracking-banner.status-pending { border-left-color: #0d6efd; background: #eef5ff; }
-							.tracking-banner.status-out_for_delivery { border-left-color: #fd7e14; background: #fff6ec; }
-							.tracking-banner.status-delivered { border-left-color: #198754; background: #eefaf1; }
-							.tracking-banner.status-delayed { border-left-color: #dc3545; background: #fdeeee; }
-							.tracking-banner.status-cancelled { border-left-color: #343a40; background: #f0f0f0; }
-							.tracking-banner-icon { font-size: 26px; line-height: 1; }
-							.tracking-banner-status { font-weight: 700; font-size: 17px; text-transform: capitalize; }
-							.tracking-banner-sub { font-size: 13px; }
-
-							.tracking-timeline { padding: 10px 4px 0; }
-							.tracking-timeline-track {
-								position: relative; height: 4px; background: #e6e9ee; border-radius: 4px;
-								margin: 0 22px 14px;
+							.vlx-status-banner {
+								font-size: 20px; font-weight: 700; color: var(--vlx-text);
+								margin-bottom: 4px;
 							}
-							.tracking-timeline-fill {
+							.vlx-progress-timeline { margin-top: 6px; }
+							.vlx-timeline-labels {
+								display: flex; justify-content: space-between;
+								font-size: 12px; color: var(--vlx-muted); margin-bottom: 8px;
+							}
+							.vlx-timeline-labels small { color: var(--vlx-muted); }
+							.vlx-progress-track {
+								position: relative; height: 6px; background: #E6E9EE;
+								border-radius: 6px; margin: 0 4px;
+							}
+							.vlx-progress-fill {
 								position: absolute; top: 0; left: 0; height: 100%; width: 0%;
-								background: linear-gradient(90deg,#0d6efd,#3ba7f0);
-								border-radius: 4px;
+								background: var(--vlx-accent); border-radius: 6px;
 								transition: width 0.8s ease;
 							}
-							.tracking-timeline-fill.is-delayed { background: linear-gradient(90deg,#dc3545,#f0868f); }
-							.tracking-timeline-steps { display: flex; justify-content: space-between; }
-							.tracking-step { display: flex; flex-direction: column; align-items: center; flex: 1; text-align: center; }
-							.tracking-step-icon {
-								width: 40px; height: 40px; border-radius: 50%;
-								background: #fff; border: 2px solid #e6e9ee; color: #b6bcc4;
-								display: flex; align-items: center; justify-content: center;
-								margin-bottom: 8px; transition: all 0.4s ease;
+							.vlx-progress-fill.is-delayed { background: #b3261e; }
+							.vlx-progress-fill.is-cancelled { background: #a0aec0; }
+							.vlx-progress-thumb {
+								position: absolute; top: 50%; left: 0%;
+								width: 16px; height: 16px; border-radius: 50%;
+								background: var(--vlx-accent); border: 3px solid #fff;
+								box-shadow: 0 0 0 2px var(--vlx-accent);
+								transform: translate(-50%, -50%);
+								transition: left 0.8s ease;
 							}
-							.tracking-step.is-complete .tracking-step-icon {
-								background: #0d6efd; border-color: #0d6efd; color: #fff;
-							}
-							.tracking-step.is-current .tracking-step-icon {
-								background: #fff; border-color: #0d6efd; color: #0d6efd;
-								box-shadow: 0 0 0 5px rgba(13,110,253,0.15);
-								animation: trackingPulse 1.6s infinite;
-							}
-							.tracking-step.is-delayed .tracking-step-icon {
-								border-color: #dc3545; color: #dc3545;
-								box-shadow: 0 0 0 5px rgba(220,53,69,0.15);
-							}
-							.tracking-step-label { font-size: 12px; color: #6c757d; max-width: 80px; }
-							.tracking-step.is-complete .tracking-step-label,
-							.tracking-step.is-current .tracking-step-label { color: #212529; font-weight: 600; }
 
-							@keyframes trackingPulse {
-								0% { box-shadow: 0 0 0 5px rgba(13,110,253,0.15); }
-								50% { box-shadow: 0 0 0 9px rgba(13,110,253,0.06); }
-								100% { box-shadow: 0 0 0 5px rgba(13,110,253,0.15); }
+							.vlx-card {
+								background: #fff; border-radius: 10px; padding: 20px;
+								border: 1px solid #EDF2F7;
 							}
+							.vlx-card h3 { font-size: 16px; font-weight: 600; color: var(--vlx-text); margin-bottom: 10px; }
+							.vlx-card h4 { font-size: 15px; font-weight: 600; color: var(--vlx-text); margin-bottom: 8px; }
+							.vlx-card p { font-size: 14px; color: var(--vlx-muted); }
+
+							.vlx-address-grid {
+								display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+							}
+							@media (max-width: 575.98px) {
+								.vlx-address-grid { grid-template-columns: 1fr; }
+							}
+
+							.vlx-table-row {
+								display: flex; justify-content: space-between; gap: 12px;
+								padding: 10px 0; border-bottom: 1px solid #EDF2F7;
+								font-size: 14px; color: var(--vlx-text);
+							}
+							.vlx-table-row:last-child { border-bottom: none; }
+							.vlx-table-row > span:first-child { color: var(--vlx-muted); flex-shrink: 0; }
+							.vlx-status-highlight { color: var(--vlx-accent); font-weight: 600; }
+
+							#vlx-live-timeline .vlx-timeline-item {
+								padding: 10px 0; border-bottom: 1px solid #EDF2F7;
+							}
+							#vlx-live-timeline .vlx-timeline-item:last-child { border-bottom: none; }
+							#vlx-live-timeline .vlx-timeline-date { font-size: 12px; color: var(--vlx-muted); }
+							#vlx-live-timeline .vlx-timeline-desc { font-size: 14px; color: var(--vlx-text); margin: 0; }
+
+							.btn-track-more {
+								background: var(--vlx-accent); color: #fff; border: none;
+								border-radius: 8px; padding: 14px; font-weight: 600; font-size: 15px;
+								width: 100%;
+							}
+							.btn-track-more:hover { background: #c73f31; color: #fff; }
 						</style>
 
 					</div>
@@ -768,60 +796,51 @@ const trackingSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABL
 let trackingMap = null;
 
 const TRACKING_STEPS = ['pending', 'in_transit', 'out_for_delivery', 'delivered'];
-const STATUS_ICONS = {
-    pending: '📦', in_transit: '🚚', out_for_delivery: '🛵',
-    delivered: '✅', delayed: '⚠️', cancelled: '✕'
-};
 const STATUS_LABELS = {
     pending: 'Order Placed', in_transit: 'In Transit', out_for_delivery: 'Out for Delivery',
     delivered: 'Delivered', delayed: 'Delayed', cancelled: 'Cancelled'
 };
+const STATUS_ICON = {
+    pending: '📦', in_transit: '🚚', out_for_delivery: '🛵',
+    delivered: '✅', delayed: '⚠️', cancelled: '✕'
+};
 
-function renderTrackingBanner(status) {
-    const banner = document.getElementById('tracking-banner');
-    banner.className = 'tracking-banner status-' + status;
-    document.getElementById('tracking-banner-icon').textContent = STATUS_ICONS[status] || '📦';
-    document.getElementById('tracking-banner-status').textContent = STATUS_LABELS[status] || status;
-
-    let sub = '';
-    if (status === 'delayed') sub = 'This shipment is experiencing a delay. We appreciate your patience.';
-    else if (status === 'cancelled') sub = 'This shipment has been cancelled.';
-    else if (status === 'delivered') sub = 'Your package has been delivered. Thank you for choosing Velorix.';
-    else sub = 'Your package is on its way — tracking updates in real time.';
-    document.getElementById('tracking-banner-sub').textContent = sub;
+function formatDate(d) {
+    if (!d) return '—';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    return dt.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function renderTrackingTimeline(status) {
-    const timelineEl = document.getElementById('tracking-timeline');
-    const fillEl = document.getElementById('tracking-timeline-fill');
-    const steps = timelineEl.querySelectorAll('.tracking-step');
+function renderStatusAndProgress(shipment) {
+    const status = shipment.status;
+    const banner = document.getElementById('vlx-status-banner');
+    banner.textContent = (STATUS_ICON[status] || '📍') + ' ' + (STATUS_LABELS[status] || status);
+    banner.style.color = (status === 'delayed') ? '#b3261e' : (status === 'cancelled' ? '#718096' : '#2D3748');
+
+    document.getElementById('vlx-ship-date').textContent = formatDate(shipment.shipment_date);
+    document.getElementById('vlx-eta-date').textContent = formatDate(shipment.estimated_delivery);
+
+    const fillEl = document.getElementById('vlx-progress-fill');
+    const thumbEl = document.getElementById('vlx-progress-thumb');
+
+    fillEl.classList.remove('is-delayed', 'is-cancelled');
 
     if (status === 'cancelled') {
-        timelineEl.style.opacity = '0.4';
         fillEl.style.width = '0%';
-        steps.forEach(s => s.classList.remove('is-complete', 'is-current', 'is-delayed'));
+        thumbEl.style.left = '0%';
+        fillEl.classList.add('is-cancelled');
         return;
     }
-    timelineEl.style.opacity = '1';
 
-    // Delayed shipments still show progress up to "in_transit" but flagged red
     const effectiveStatus = status === 'delayed' ? 'in_transit' : status;
     const idx = TRACKING_STEPS.indexOf(effectiveStatus);
     const activeIdx = idx === -1 ? 0 : idx;
-    const fillPercent = (activeIdx / (TRACKING_STEPS.length - 1)) * 100;
+    const percent = Math.round(((activeIdx + 1) / TRACKING_STEPS.length) * 100);
 
-    fillEl.style.width = fillPercent + '%';
-    fillEl.classList.toggle('is-delayed', status === 'delayed');
-
-    steps.forEach(function(stepEl) {
-        const stepIdx = parseInt(stepEl.dataset.step, 10);
-        stepEl.classList.remove('is-complete', 'is-current', 'is-delayed');
-        if (stepIdx < activeIdx) {
-            stepEl.classList.add('is-complete');
-        } else if (stepIdx === activeIdx) {
-            stepEl.classList.add(status === 'delayed' ? 'is-delayed' : 'is-current');
-        }
-    });
+    fillEl.style.width = percent + '%';
+    thumbEl.style.left = percent + '%';
+    if (status === 'delayed') fillEl.classList.add('is-delayed');
 }
 
 document.getElementById('tracking-form').addEventListener('submit', async function(e) {
@@ -859,31 +878,49 @@ document.getElementById('tracking-form').addEventListener('submit', async functi
         return;
     }
 
-    // Populate result fields
-    document.getElementById('res-tracking-number').textContent = shipment.tracking_number;
-    document.getElementById('res-origin').textContent = shipment.origin || '—';
-    document.getElementById('res-destination').textContent = shipment.destination || '—';
-    document.getElementById('res-eta').textContent = shipment.estimated_delivery || '—';
-    document.getElementById('res-weight').textContent = shipment.weight_kg ? shipment.weight_kg + ' kg' : '—';
+    // Status banner + progress bar
+    renderStatusAndProgress(shipment);
 
-    renderTrackingBanner(shipment.status);
-    renderTrackingTimeline(shipment.status);
+    // Shipping details (sender / receiver)
+    document.getElementById('vlx-sender-name').textContent = shipment.sender_name || '—';
+    document.getElementById('vlx-sender-address').textContent = shipment.sender_address ? 'Address: ' + shipment.sender_address : '';
+    document.getElementById('vlx-sender-email').textContent = shipment.sender_email ? 'Email: ' + shipment.sender_email : '';
+    document.getElementById('vlx-sender-phone').textContent = shipment.sender_phone ? 'Phone: ' + shipment.sender_phone : '';
 
-    // Fetch tracking history
+    document.getElementById('vlx-receiver-name').textContent = shipment.receiver_name || '—';
+    document.getElementById('vlx-receiver-address').textContent = shipment.receiver_address ? 'Address: ' + shipment.receiver_address : '';
+    document.getElementById('vlx-receiver-email').textContent = shipment.receiver_email ? 'Email: ' + shipment.receiver_email : '';
+    document.getElementById('vlx-receiver-phone').textContent = shipment.receiver_phone ? 'Phone: ' + shipment.receiver_phone : '';
+
+    // Tracking data table
+    document.getElementById('vlx-tid').textContent = shipment.tracking_number;
+    document.getElementById('vlx-description').textContent = shipment.description || '—';
+    document.getElementById('vlx-status-highlight').textContent = (STATUS_ICON[shipment.status] || '📍') + ' ' + (STATUS_LABELS[shipment.status] || shipment.status);
+    document.getElementById('vlx-origin').textContent = shipment.origin || '—';
+    document.getElementById('vlx-destination').textContent = shipment.destination || '—';
+    document.getElementById('vlx-eta-2').textContent = formatDate(shipment.estimated_delivery);
+    document.getElementById('vlx-shipdate-2').textContent = formatDate(shipment.shipment_date);
+
+    // Fetch tracking history (most recent first, matching the "location history" list style)
     const { data: history } = await trackingSupabase
         .from('tracking_history')
         .select('*')
         .eq('shipment_id', shipment.id)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false });
 
-    const historyList = document.getElementById('res-history');
-    historyList.innerHTML = '';
+    const historyEl = document.getElementById('vlx-live-timeline');
+    historyEl.innerHTML = '';
     (history || []).forEach(function(h) {
-        const li = document.createElement('li');
-        const when = new Date(h.created_at).toLocaleString();
-        li.textContent = when + ' — ' + h.status + (h.location ? ' (' + h.location + ')' : '') + (h.note ? ': ' + h.note : '');
-        historyList.appendChild(li);
+        const item = document.createElement('div');
+        item.className = 'vlx-timeline-item';
+        const dateStr = formatDate(h.created_at);
+        const desc = (h.location ? h.location + ' — ' : '') + h.status.replace(/_/g, ' ') + (h.note ? ': ' + h.note : '');
+        item.innerHTML = '<div class="vlx-timeline-date">' + dateStr + '</div><p class="vlx-timeline-desc">' + desc + '</p>';
+        historyEl.appendChild(item);
     });
+    if (!history || !history.length) {
+        historyEl.innerHTML = '<div class="vlx-timeline-item"><p class="vlx-timeline-desc text-muted">No location history yet.</p></div>';
+    }
 
     resultBox.style.display = 'flex';
 
@@ -898,7 +935,6 @@ document.getElementById('tracking-form').addEventListener('submit', async functi
             trackingMap.setView([shipment.current_lat, shipment.current_lng], 6);
         }
 
-        // Clear old markers/layers
         trackingMap.eachLayer(function(layer) {
             if (layer instanceof L.Marker || layer instanceof L.Routing.Control) {
                 trackingMap.removeLayer(layer);
@@ -923,6 +959,13 @@ document.getElementById('tracking-form').addEventListener('submit', async functi
 
         setTimeout(function() { trackingMap.invalidateSize(); }, 100);
     }
+});
+
+document.getElementById('track-another-btn').addEventListener('click', function() {
+    document.getElementById('tracking-result').style.display = 'none';
+    document.getElementById('InputProduct').value = '';
+    document.getElementById('InputProduct').focus();
+    window.scrollTo({ top: document.getElementById('tracking-form').offsetTop - 100, behavior: 'smooth' });
 });
 </script>
     <!-- map -->

@@ -203,14 +203,57 @@
                                     <input type="text" class="form-control" name="tracking_number" required placeholder="e.g. VLX-1000002">
                                 </div>
                                 <div class="col-md-4 form-group">
+                                    <label>Description</label>
+                                    <input type="text" class="form-control" name="description" placeholder="e.g. Parcel contains fashion items">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Package Type</label>
+                                    <input type="text" class="form-control" name="package_type" placeholder="e.g. Parcel">
+                                </div>
+                            </div>
+
+                            <hr>
+                            <h6 class="text-muted">Sender</h6>
+                            <div class="form-row">
+                                <div class="col-md-3 form-group">
                                     <label>Sender Name</label>
                                     <input type="text" class="form-control" name="sender_name">
                                 </div>
-                                <div class="col-md-4 form-group">
+                                <div class="col-md-5 form-group">
+                                    <label>Sender Address</label>
+                                    <input type="text" class="form-control" name="sender_address">
+                                </div>
+                                <div class="col-md-2 form-group">
+                                    <label>Sender Email</label>
+                                    <input type="email" class="form-control" name="sender_email">
+                                </div>
+                                <div class="col-md-2 form-group">
+                                    <label>Sender Phone</label>
+                                    <input type="text" class="form-control" name="sender_phone">
+                                </div>
+                            </div>
+
+                            <h6 class="text-muted">Receiver</h6>
+                            <div class="form-row">
+                                <div class="col-md-3 form-group">
                                     <label>Receiver Name</label>
                                     <input type="text" class="form-control" name="receiver_name">
                                 </div>
+                                <div class="col-md-5 form-group">
+                                    <label>Receiver Address</label>
+                                    <input type="text" class="form-control" name="receiver_address">
+                                </div>
+                                <div class="col-md-2 form-group">
+                                    <label>Receiver Email</label>
+                                    <input type="email" class="form-control" name="receiver_email">
+                                </div>
+                                <div class="col-md-2 form-group">
+                                    <label>Receiver Phone</label>
+                                    <input type="text" class="form-control" name="receiver_phone">
+                                </div>
                             </div>
+
+                            <hr>
                             <div class="form-row">
                                 <div class="col-md-6 form-group">
                                     <label>Origin</label>
@@ -218,7 +261,7 @@
                                 </div>
                                 <div class="col-md-6 form-group">
                                     <label>Destination</label>
-                                    <input type="text" class="form-control" name="destination" placeholder="e.g. Abuja, NG">
+                                    <input type="text" class="form-control" name="destination" placeholder="e.g. City, Country">
                                 </div>
                             </div>
                             <div class="form-row">
@@ -266,12 +309,12 @@
                             </div>
                             <div class="form-row">
                                 <div class="col-md-3 form-group">
-                                    <label>Weight (kg)</label>
-                                    <input type="number" step="any" class="form-control" name="weight_kg">
+                                    <label>Shipment Date</label>
+                                    <input type="date" class="form-control" name="shipment_date">
                                 </div>
                                 <div class="col-md-3 form-group">
-                                    <label>Package Type</label>
-                                    <input type="text" class="form-control" name="package_type" placeholder="e.g. Parcel">
+                                    <label>Weight (kg)</label>
+                                    <input type="number" step="any" class="form-control" name="weight_kg">
                                 </div>
                             </div>
                             <button type="submit" class="btn btn-primary" id="add-shipment-btn">Create Shipment</button>

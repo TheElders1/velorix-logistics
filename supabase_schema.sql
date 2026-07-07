@@ -6,9 +6,16 @@ create table if not exists shipments (
   id uuid primary key default gen_random_uuid(),
   tracking_number text unique not null,
   sender_name text,
+  sender_address text,
+  sender_email text,
+  sender_phone text,
   receiver_name text,
+  receiver_address text,
+  receiver_email text,
+  receiver_phone text,
   origin text,
   destination text,
+  description text,
   status text not null default 'pending', -- pending, in_transit, out_for_delivery, delivered, delayed, cancelled
   current_lat double precision,
   current_lng double precision,
@@ -17,11 +24,22 @@ create table if not exists shipments (
   destination_lat double precision,
   destination_lng double precision,
   estimated_delivery date,
+  shipment_date date,
   weight_kg numeric,
   package_type text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- If the table already existed before this update, add the new columns safely:
+alter table shipments add column if not exists sender_address text;
+alter table shipments add column if not exists sender_email text;
+alter table shipments add column if not exists sender_phone text;
+alter table shipments add column if not exists receiver_address text;
+alter table shipments add column if not exists receiver_email text;
+alter table shipments add column if not exists receiver_phone text;
+alter table shipments add column if not exists description text;
+alter table shipments add column if not exists shipment_date date;
 
 -- 2. Tracking history — status timeline shown on the public tracking page
 create table if not exists tracking_history (
