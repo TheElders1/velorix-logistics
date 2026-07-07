@@ -216,10 +216,18 @@ function googleTranslateElementInit() {
 									</div>
 								</div>
 							</div>
-							<button type="submit" class="btn btn-primary w-100" id="tracking-submit-btn">Next</button>
+							<button type="submit" class="btn btn-primary w-100" id="tracking-submit-btn">
+								<span class="spinner-border spinner-border-sm mr-2 d-none" id="tracking-spinner" role="status" aria-hidden="true"></span>
+								<span id="tracking-btn-text">Next</span>
+							</button>
 						</form>
 
 						<div id="tracking-error" class="alert alert-danger" style="display:none;"></div>
+
+						<div id="tracking-loading" style="display:none;" class="text-center py-5">
+							<div class="spinner-border text-primary" role="status" style="width:3rem;height:3rem;"></div>
+							<p class="mt-3 text-secondary mb-0">Fetching shipment details...</p>
+						</div>
 
 						<div id="tracking-result" style="display:none;" class="d-flex flex-column gap-20">
 							<div class="row g-3">
@@ -664,12 +672,18 @@ let trackingMap = null;
 document.getElementById('tracking-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const btn = document.getElementById('tracking-submit-btn');
+    const spinner = document.getElementById('tracking-spinner');
+    const btnText = document.getElementById('tracking-btn-text');
+    const loadingBox = document.getElementById('tracking-loading');
     const errorBox = document.getElementById('tracking-error');
     const resultBox = document.getElementById('tracking-result');
+
     errorBox.style.display = 'none';
     resultBox.style.display = 'none';
+    loadingBox.style.display = 'block';
     btn.disabled = true;
-    btn.textContent = 'Searching...';
+    spinner.classList.remove('d-none');
+    btnText.textContent = 'Searching...';
 
     const trackingId = document.getElementById('InputProduct').value.trim();
 
@@ -679,8 +693,10 @@ document.getElementById('tracking-form').addEventListener('submit', async functi
         .eq('tracking_number', trackingId)
         .maybeSingle();
 
+    loadingBox.style.display = 'none';
     btn.disabled = false;
-    btn.textContent = 'Next';
+    spinner.classList.add('d-none');
+    btnText.textContent = 'Next';
 
     if (error || !shipment) {
         errorBox.textContent = 'No shipment found for that tracking number. Please check and try again.';
