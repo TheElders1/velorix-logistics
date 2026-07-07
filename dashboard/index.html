@@ -46,6 +46,58 @@
             display: flex; align-items: center; justify-content: center;
             z-index: 9999; font-size: 18px; color: #333;
         }
+
+        /* --- Mobile responsiveness --- */
+        #mobile-menu-btn { display: none; }
+
+        @media (max-width: 767.98px) {
+            #app-shell.d-flex { display: block !important; }
+
+            .sidebar {
+                position: fixed;
+                top: 0; left: 0; bottom: 0;
+                width: 240px;
+                min-height: 100vh;
+                transform: translateX(-100%);
+                transition: transform 0.25s ease;
+                z-index: 1050;
+                overflow-y: auto;
+            }
+            .sidebar.is-open { transform: translateX(0); }
+
+            .sidebar-backdrop {
+                display: none;
+                position: fixed; inset: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 1040;
+            }
+            .sidebar-backdrop.is-open { display: block; }
+
+            #mobile-menu-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 38px; height: 38px;
+                border: none;
+                background: #101c2d;
+                color: #fff;
+                border-radius: 6px;
+                margin-right: 12px;
+            }
+
+            .topbar { padding: 12px 15px; }
+            .topbar h5 { font-size: 16px; }
+            #admin-email-label { font-size: 12px; word-break: break-all; max-width: 140px; text-align: right; }
+
+            .p-4 { padding: 15px !important; }
+
+            .card-stat h3 { font-size: 22px; }
+            .card-stat .col-md-3 { margin-bottom: 10px; }
+
+            .form-row .form-group { margin-bottom: 12px; }
+
+            #edit-modal .modal-dialog { margin: 10px; }
+        }
     </style>
 </head>
 <body>
@@ -53,8 +105,10 @@
 <div id="auth-guard-overlay">Checking session...</div>
 
 <div class="d-flex" id="app-shell" style="display:none !important;">
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
     <!-- Sidebar -->
-    <nav class="sidebar" style="width: 240px; flex-shrink:0;">
+    <nav class="sidebar" id="sidebar" style="width: 240px; flex-shrink:0;">
         <div class="logo-wrap">
             <img src="logo.png" alt="Velorix Logistics">
         </div>
@@ -66,9 +120,14 @@
     </nav>
 
     <!-- Main content -->
-    <div class="flex-grow-1">
+    <div class="flex-grow-1" style="min-width:0;">
         <div class="topbar d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Admin Dashboard</h5>
+            <div class="d-flex align-items-center">
+                <button id="mobile-menu-btn" aria-label="Open menu">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                </button>
+                <h5 class="mb-0">Admin Dashboard</h5>
+            </div>
             <span id="admin-email-label" class="text-muted"></span>
         </div>
 
@@ -155,7 +214,7 @@
                             <div class="form-row">
                                 <div class="col-md-6 form-group">
                                     <label>Origin</label>
-                                    <input type="text" class="form-control" name="origin" placeholder="e.g. Lagos, NG">
+                                    <input type="text" class="form-control" name="origin" placeholder="e.g. City, Country">
                                 </div>
                                 <div class="col-md-6 form-group">
                                     <label>Destination</label>
@@ -315,6 +374,22 @@ document.getElementById('logout-link').addEventListener('click', async function(
     window.location.href = '../login.html';
 });
 
+// --- Mobile sidebar toggle ---
+const sidebarEl = document.getElementById('sidebar');
+const backdropEl = document.getElementById('sidebar-backdrop');
+const menuBtn = document.getElementById('mobile-menu-btn');
+
+function openSidebar() {
+    sidebarEl.classList.add('is-open');
+    backdropEl.classList.add('is-open');
+}
+function closeSidebar() {
+    sidebarEl.classList.remove('is-open');
+    backdropEl.classList.remove('is-open');
+}
+menuBtn.addEventListener('click', openSidebar);
+backdropEl.addEventListener('click', closeSidebar);
+
 // --- Sidebar panel switching ---
 document.querySelectorAll('.nav-link[data-panel]').forEach(function(link) {
     link.addEventListener('click', function(e) {
@@ -323,6 +398,7 @@ document.querySelectorAll('.nav-link[data-panel]').forEach(function(link) {
         this.classList.add('active');
         document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
         document.getElementById(this.dataset.panel).classList.add('active');
+        closeSidebar();
     });
 });
 

@@ -102,8 +102,8 @@ insert into shipments (
   current_lat, current_lng, origin_lat, origin_lng, destination_lat, destination_lng,
   estimated_delivery, weight_kg, package_type
 ) values (
-  'VLX-1000001', 'Erhustech Test Sender', 'Test Receiver', 'Lagos, NG', 'Abuja, NG', 'in_transit',
-  8.9, 7.4, 6.5244, 3.3792, 9.0765, 7.3986,
+  'VLX-1000001', 'Test Sender', 'Test Receiver', 'Origin City', 'Destination City', 'in_transit',
+  0, 0, 0, 0, 0, 0,
   current_date + interval '3 days', 5.2, 'Parcel'
 )
 on conflict (tracking_number) do nothing;
