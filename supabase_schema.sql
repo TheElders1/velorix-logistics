@@ -16,6 +16,9 @@ create table if not exists shipments (
   origin text,
   destination text,
   description text,
+  shipment_comments text,
+  notification_type text,
+  package_image_url text,
   status text not null default 'pending', -- pending, in_transit, out_for_delivery, delivered, delayed, cancelled
   current_lat double precision,
   current_lng double precision,
@@ -40,6 +43,9 @@ alter table shipments add column if not exists receiver_email text;
 alter table shipments add column if not exists receiver_phone text;
 alter table shipments add column if not exists description text;
 alter table shipments add column if not exists shipment_date date;
+alter table shipments add column if not exists shipment_comments text;
+alter table shipments add column if not exists notification_type text; -- EMAIL or SMS
+alter table shipments add column if not exists package_image_url text;
 
 -- 2. Tracking history — status timeline shown on the public tracking page
 create table if not exists tracking_history (
@@ -120,8 +126,35 @@ insert into shipments (
   current_lat, current_lng, origin_lat, origin_lng, destination_lat, destination_lng,
   estimated_delivery, weight_kg, package_type
 ) values (
-  'VLX-1000001', 'Test Sender', 'Test Receiver', 'Origin City', 'Destination City', 'in_transit',
-  0, 0, 0, 0, 0, 0,
+  'VLX-1000001', 'Test Sender', 'Test Receiver', 'Bucharest, Romania', 'Jakarta, Indonesia', 'in_transit',
+  -6.2088, 106.8456, 44.4268, 26.1025, -6.2088, 106.8456,
   current_date + interval '3 days', 5.2, 'Parcel'
 )
 on conflict (tracking_number) do nothing;
+
+-- 5. Storage bucket for parcel images (uploaded from the admin dashboard)
+insert into storage.buckets (id, name, public)
+values ('shipment-images', 'shipment-images', true)
+on conflict (id) do nothing;
+
+-- Public read access to images (needed so the tracking page / dashboard can display them)
+create policy "Public can view shipment images"
+on storage.objects for select
+to anon, authenticated
+using (bucket_id = 'shipment-images');
+
+-- Only logged-in admin can upload/replace/delete images
+create policy "Authenticated users can upload shipment images"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'shipment-images');
+
+create policy "Authenticated users can update shipment images"
+on storage.objects for update
+to authenticated
+using (bucket_id = 'shipment-images');
+
+create policy "Authenticated users can delete shipment images"
+on storage.objects for delete
+to authenticated
+using (bucket_id = 'shipment-images');

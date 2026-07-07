@@ -193,77 +193,142 @@
 
             <!-- Add shipment panel -->
             <div id="panel-add-shipment" class="content-panel">
-                <div class="card card-stat">
-                    <div class="card-body">
-                        <h5 class="mb-3">Add New Shipment</h5>
-                        <form id="add-shipment-form">
-                            <div class="form-row">
-                                <div class="col-md-4 form-group">
-                                    <label>Tracking Number *</label>
-                                    <input type="text" class="form-control" name="tracking_number" required placeholder="e.g. VLX-1000002">
-                                </div>
-                                <div class="col-md-4 form-group">
-                                    <label>Description</label>
-                                    <input type="text" class="form-control" name="description" placeholder="e.g. Parcel contains fashion items">
-                                </div>
-                                <div class="col-md-4 form-group">
-                                    <label>Package Type</label>
-                                    <input type="text" class="form-control" name="package_type" placeholder="e.g. Parcel">
-                                </div>
+                <div class="vlx-form-page">
+                    <h1 class="vlx-form-heading">Create new shipment</h1>
+                    <p class="vlx-form-instructions">Fill in the form below to create new shipment. Tracking code is automatically generated</p>
+
+                    <form id="add-shipment-form" enctype="multipart/form-data">
+
+                        <!-- Sender information -->
+                        <section class="vlx-form-card">
+                            <div class="vlx-card-header">
+                                <h2>Sender information</h2>
+                                <p>Information's about the person sending the parcel</p>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-sender-name">Name:</label>
+                                <input type="text" class="form-control" id="fld-sender-name" name="sender_name" placeholder="The sender name">
+                                <small class="vlx-field-help">The sender name</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-sender-address">Address &amp; Country:</label>
+                                <input type="text" class="form-control" id="fld-sender-address" name="sender_address" placeholder="The sender address">
+                                <small class="vlx-field-help">The sender address</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-sender-phone">Phone:</label>
+                                <input type="tel" class="form-control" id="fld-sender-phone" name="sender_phone" placeholder="The sender phone">
+                                <small class="vlx-field-help">The sender phone number</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-sender-email">Email:</label>
+                                <input type="email" class="form-control" id="fld-sender-email" name="sender_email" placeholder="The sender email">
+                                <small class="vlx-field-help">The sender email</small>
+                            </div>
+                        </section>
+
+                        <!-- Client (receiver) information -->
+                        <section class="vlx-form-card">
+                            <div class="vlx-card-header">
+                                <h2>Client information</h2>
+                                <p>Information's about the client receiving the parcel</p>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-client-name">Name:</label>
+                                <input type="text" class="form-control" id="fld-client-name" name="receiver_name" placeholder="The client name">
+                                <small class="vlx-field-help">The client name</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-client-address">Address &amp; Country:</label>
+                                <input type="text" class="form-control" id="fld-client-address" name="receiver_address" placeholder="The client address">
+                                <small class="vlx-field-help">The client address</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-client-phone">Phone:</label>
+                                <input type="tel" class="form-control" id="fld-client-phone" name="receiver_phone" placeholder="The client phone">
+                                <small class="vlx-field-help">The client phone number</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-client-email">Email:</label>
+                                <input type="email" class="form-control" id="fld-client-email" name="receiver_email" placeholder="The client email">
+                                <small class="vlx-field-help">The client email</small>
+                            </div>
+                        </section>
+
+                        <!-- Parcel information -->
+                        <section class="vlx-form-card">
+                            <div class="vlx-card-header">
+                                <h2>Parcel information</h2>
+                                <p>Information's about the parcel</p>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-parcel-desc">Description:</label>
+                                <input type="text" class="form-control" id="fld-parcel-desc" name="description" placeholder="The description of the parcel">
+                                <small class="vlx-field-help">The description of parcel or what it contains</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-parcel-weight">Weight (kg):</label>
+                                <input type="number" step="any" class="form-control" id="fld-parcel-weight" name="weight_kg">
+                                <small class="vlx-field-help">The weight of the parcel</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-parcel-comments">Shipment Comments:</label>
+                                <input type="text" class="form-control" id="fld-parcel-comments" name="shipment_comments">
+                                <small class="vlx-field-help">Any comment needed for this shipment</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-parcel-destination">Destination:</label>
+                                <input type="text" class="form-control" id="fld-parcel-destination" name="destination" placeholder="e.g. City, Country">
+                                <small class="vlx-field-help">The address this parcel will be delivered</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-parcel-origin">Shipped from:</label>
+                                <input type="text" class="form-control" id="fld-parcel-origin" name="origin" placeholder="e.g. City, Country">
+                                <small class="vlx-field-help">The country the shipment is coming from</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-delivery-date">Expected date of Delivery:</label>
+                                <input type="date" class="form-control" id="fld-delivery-date" name="estimated_delivery">
+                                <small class="vlx-field-help">The expected date of delivery of the parcel</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-shipment-date">Date of shipment:</label>
+                                <input type="date" class="form-control" id="fld-shipment-date" name="shipment_date">
+                                <small class="vlx-field-help">The date of shipping this parcel</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-parcel-image">Parcel image:</label>
+                                <input type="file" class="form-control-file" id="fld-parcel-image" name="package_image" accept="image/*">
+                                <small class="vlx-field-help">The image of the parcel (optional)</small>
+                            </div>
+
+                            <div class="vlx-form-group">
+                                <label for="fld-notification-type">Send notification</label>
+                                <select class="form-control" id="fld-notification-type" name="notification_type">
+                                    <option value="EMAIL">EMAIL</option>
+                                    <option value="SMS">SMS</option>
+                                </select>
+                                <small class="vlx-field-help">Notification sending is not yet connected to a live email/SMS provider — this just records the preference for now.</small>
                             </div>
 
                             <hr>
-                            <h6 class="text-muted">Sender</h6>
-                            <div class="form-row">
-                                <div class="col-md-3 form-group">
-                                    <label>Sender Name</label>
-                                    <input type="text" class="form-control" name="sender_name">
-                                </div>
-                                <div class="col-md-5 form-group">
-                                    <label>Sender Address</label>
-                                    <input type="text" class="form-control" name="sender_address">
-                                </div>
-                                <div class="col-md-2 form-group">
-                                    <label>Sender Email</label>
-                                    <input type="email" class="form-control" name="sender_email">
-                                </div>
-                                <div class="col-md-2 form-group">
-                                    <label>Sender Phone</label>
-                                    <input type="text" class="form-control" name="sender_phone">
-                                </div>
-                            </div>
-
-                            <h6 class="text-muted">Receiver</h6>
-                            <div class="form-row">
-                                <div class="col-md-3 form-group">
-                                    <label>Receiver Name</label>
-                                    <input type="text" class="form-control" name="receiver_name">
-                                </div>
-                                <div class="col-md-5 form-group">
-                                    <label>Receiver Address</label>
-                                    <input type="text" class="form-control" name="receiver_address">
-                                </div>
-                                <div class="col-md-2 form-group">
-                                    <label>Receiver Email</label>
-                                    <input type="email" class="form-control" name="receiver_email">
-                                </div>
-                                <div class="col-md-2 form-group">
-                                    <label>Receiver Phone</label>
-                                    <input type="text" class="form-control" name="receiver_phone">
-                                </div>
-                            </div>
-
-                            <hr>
-                            <div class="form-row">
-                                <div class="col-md-6 form-group">
-                                    <label>Origin</label>
-                                    <input type="text" class="form-control" name="origin" placeholder="e.g. City, Country">
-                                </div>
-                                <div class="col-md-6 form-group">
-                                    <label>Destination</label>
-                                    <input type="text" class="form-control" name="destination" placeholder="e.g. City, Country">
-                                </div>
-                            </div>
+                            <h6 class="text-muted">Live location &amp; status (optional at creation)</h6>
                             <div class="form-row">
                                 <div class="col-md-3 form-group">
                                     <label>Origin Lat</label>
@@ -283,15 +348,15 @@
                                 </div>
                             </div>
                             <div class="form-row">
-                                <div class="col-md-3 form-group">
+                                <div class="col-md-4 form-group">
                                     <label>Current Lat</label>
                                     <input type="number" step="any" class="form-control" name="current_lat">
                                 </div>
-                                <div class="col-md-3 form-group">
+                                <div class="col-md-4 form-group">
                                     <label>Current Lng</label>
                                     <input type="number" step="any" class="form-control" name="current_lng">
                                 </div>
-                                <div class="col-md-3 form-group">
+                                <div class="col-md-4 form-group">
                                     <label>Status</label>
                                     <select class="form-control" name="status">
                                         <option value="pending">Pending</option>
@@ -302,26 +367,64 @@
                                         <option value="cancelled">Cancelled</option>
                                     </select>
                                 </div>
-                                <div class="col-md-3 form-group">
-                                    <label>Est. Delivery Date</label>
-                                    <input type="date" class="form-control" name="estimated_delivery">
-                                </div>
                             </div>
                             <div class="form-row">
-                                <div class="col-md-3 form-group">
-                                    <label>Shipment Date</label>
-                                    <input type="date" class="form-control" name="shipment_date">
+                                <div class="col-md-6 form-group">
+                                    <label>Tracking Number</label>
+                                    <input type="text" class="form-control" name="tracking_number" placeholder="Leave blank to auto-generate">
                                 </div>
-                                <div class="col-md-3 form-group">
-                                    <label>Weight (kg)</label>
-                                    <input type="number" step="any" class="form-control" name="weight_kg">
+                                <div class="col-md-6 form-group">
+                                    <label>Package Type</label>
+                                    <input type="text" class="form-control" name="package_type" placeholder="e.g. Parcel">
                                 </div>
                             </div>
-                            <button type="submit" class="btn btn-primary" id="add-shipment-btn">Create Shipment</button>
-                        </form>
-                    </div>
+
+                            <div class="vlx-form-actions">
+                                <button type="submit" class="btn-save-shipment" id="add-shipment-btn">Save Shipment</button>
+                            </div>
+                        </section>
+                    </form>
                 </div>
             </div>
+
+            <style>
+                .vlx-form-page { max-width: 720px; }
+                .vlx-form-heading { font-size: 28px; font-weight: 700; color: #000; }
+                .vlx-form-instructions { font-size: 14px; color: #4A5568; margin-bottom: 24px; }
+
+                .vlx-form-card {
+                    display: block;
+                    background: #fff;
+                    border: 1px solid #E2E8F0;
+                    border-radius: 8px;
+                    padding: 20px;
+                    padding-top: 24px;
+                    margin-bottom: 24px;
+                }
+                .vlx-card-header { margin-bottom: 16px; }
+                .vlx-card-header h2 { font-size: 18px; font-weight: 700; color: #2F855A; margin-bottom: 2px; }
+                .vlx-card-header p { font-size: 12px; color: #4A5568; margin-bottom: 0; }
+
+                .vlx-form-group { margin-bottom: 16px; }
+                .vlx-form-group label { display: block; font-size: 14px; font-weight: 600; color: #2F855A; margin-bottom: 6px; }
+                .vlx-form-group .form-control,
+                .vlx-form-group .form-control-file {
+                    width: 100%;
+                    border: 1px solid #E2E8F0;
+                    border-radius: 4px;
+                    padding: 10px 12px;
+                }
+                .vlx-field-help { display: block; color: #718096; font-size: 12px; margin-top: 4px; }
+
+                .vlx-form-actions { margin-top: 10px; }
+                .btn-save-shipment {
+                    background: #2F855A; color: #fff; border: none;
+                    border-radius: 6px; padding: 12px 28px; font-weight: 600; font-size: 15px;
+                    width: 100%;
+                }
+                .btn-save-shipment:hover { background: #276749; color: #fff; }
+                .btn-save-shipment:disabled { opacity: 0.7; }
+            </style>
 
         </div>
     </div>
@@ -506,31 +609,66 @@ document.getElementById('shipment-search').addEventListener('input', function() 
 });
 
 // --- Add shipment ---
+function generateTrackingNumber() {
+    const rand = Math.floor(1000000 + Math.random() * 9000000);
+    return 'VLX-' + rand;
+}
+
 document.getElementById('add-shipment-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const btn = document.getElementById('add-shipment-btn');
     btn.disabled = true;
-    btn.textContent = 'Creating...';
+    btn.textContent = 'Saving...';
 
     const fd = new FormData(this);
     const payload = {};
-    fd.forEach((value, key) => { payload[key] = value === '' ? null : value; });
+    const imageFile = fd.get('package_image');
+    fd.forEach((value, key) => {
+        if (key === 'package_image') return; // handled separately below
+        payload[key] = value === '' ? null : value;
+    });
 
     ['origin_lat','origin_lng','destination_lat','destination_lng','current_lat','current_lng','weight_kg'].forEach(k => {
         if (payload[k] !== null) payload[k] = parseFloat(payload[k]);
     });
 
+    if (!payload.tracking_number) {
+        payload.tracking_number = generateTrackingNumber();
+    }
+
+    // Upload parcel image to Supabase Storage, if provided
+    if (imageFile && imageFile.size > 0) {
+        btn.textContent = 'Uploading image...';
+        const ext = imageFile.name.split('.').pop();
+        const path = payload.tracking_number + '-' + Date.now() + '.' + ext;
+
+        const { error: uploadError } = await sb.storage
+            .from('shipment-images')
+            .upload(path, imageFile);
+
+        if (uploadError) {
+            btn.disabled = false;
+            btn.textContent = 'Save Shipment';
+            swal('Image upload failed', uploadError.message, 'error');
+            return;
+        }
+
+        const { data: publicUrlData } = sb.storage.from('shipment-images').getPublicUrl(path);
+        payload.package_image_url = publicUrlData.publicUrl;
+    }
+
+    btn.textContent = 'Saving...';
     const { error } = await sb.from('shipments').insert([payload]);
 
     btn.disabled = false;
-    btn.textContent = 'Create Shipment';
+    btn.textContent = 'Save Shipment';
 
     if (error) {
         swal('Error', error.message, 'error');
         return;
     }
 
-    swal('Success', 'Shipment created.', 'success');
+    swal('Success', 'Shipment created with tracking number ' + payload.tracking_number, 'success');
     this.reset();
     loadShipments();
     document.querySelector('.nav-link[data-panel="panel-shipments"]').click();
