@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velorix Admin Dashboard</title>
+    <link rel="icon" href="logo.png">
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #f5f6fa; }
+        .sidebar {
+            min-height: 100vh;
+            background: #101c2d;
+            color: #fff;
+        }
+        .sidebar .logo-wrap { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .sidebar .logo-wrap img { max-height: 60px; width: auto; }
+        .sidebar .nav-link {
+            color: #b8c2cc;
+            padding: 12px 20px;
+            border-left: 3px solid transparent;
+        }
+        .sidebar .nav-link.active, .sidebar .nav-link:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.05);
+            border-left-color: #f5793a;
+        }
+        .topbar {
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 15px 25px;
+        }
+        .card-stat { border: none; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .content-panel { display: none; }
+        .content-panel.active { display: block; }
+        .table td, .table th { vertical-align: middle; }
+        .badge-status-pending { background:#6c757d; }
+        .badge-status-in_transit { background:#0d6efd; }
+        .badge-status-out_for_delivery { background:#fd7e14; }
+        .badge-status-delivered { background:#198754; }
+        .badge-status-delayed { background:#dc3545; }
+        .badge-status-cancelled { background:#343a40; }
+        #auth-guard-overlay {
+            position: fixed; inset: 0; background: #f5f6fa;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999; font-size: 18px; color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<div id="auth-guard-overlay">Checking session...</div>
+
+<div class="d-flex" id="app-shell" style="display:none !important;">
+    <!-- Sidebar -->
+    <nav class="sidebar" style="width: 240px; flex-shrink:0;">
+        <div class="logo-wrap">
+            <img src="logo.png" alt="Velorix Logistics">
+        </div>
+        <div class="nav flex-column mt-3">
+            <a class="nav-link active" href="#" data-panel="panel-shipments">Shipments</a>
+            <a class="nav-link" href="#" data-panel="panel-add-shipment">Add Shipment</a>
+            <a class="nav-link" href="#" id="logout-link">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="flex-grow-1">
+        <div class="topbar d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Admin Dashboard</h5>
+            <span id="admin-email-label" class="text-muted"></span>
+        </div>
+
+        <div class="p-4">
+
+            <!-- Stats row -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card card-stat p-3">
+                        <div class="text-muted small">Total Shipments</div>
+                        <h3 class="mb-0" id="stat-total">—</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card card-stat p-3">
+                        <div class="text-muted small">In Transit</div>
+                        <h3 class="mb-0" id="stat-in-transit">—</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card card-stat p-3">
+                        <div class="text-muted small">Delivered</div>
+                        <h3 class="mb-0" id="stat-delivered">—</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card card-stat p-3">
+                        <div class="text-muted small">Delayed</div>
+                        <h3 class="mb-0" id="stat-delayed">—</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shipments list panel -->
+            <div id="panel-shipments" class="content-panel active">
+                <div class="card card-stat">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">All Shipments</h5>
+                            <input type="text" id="shipment-search" class="form-control" style="max-width:260px;" placeholder="Search tracking number...">
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Tracking #</th>
+                                        <th>Sender</th>
+                                        <th>Receiver</th>
+                                        <th>Route</th>
+                                        <th>Status</th>
+                                        <th>ETA</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="shipments-table-body">
+                                    <tr><td colspan="7" class="text-center text-muted py-4">Loading shipments...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add shipment panel -->
+            <div id="panel-add-shipment" class="content-panel">
+                <div class="card card-stat">
+                    <div class="card-body">
+                        <h5 class="mb-3">Add New Shipment</h5>
+                        <form id="add-shipment-form">
+                            <div class="form-row">
+                                <div class="col-md-4 form-group">
+                                    <label>Tracking Number *</label>
+                                    <input type="text" class="form-control" name="tracking_number" required placeholder="e.g. VLX-1000002">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Sender Name</label>
+                                    <input type="text" class="form-control" name="sender_name">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Receiver Name</label>
+                                    <input type="text" class="form-control" name="receiver_name">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="col-md-6 form-group">
+                                    <label>Origin</label>
+                                    <input type="text" class="form-control" name="origin" placeholder="e.g. Lagos, NG">
+                                </div>
+                                <div class="col-md-6 form-group">
+                                    <label>Destination</label>
+                                    <input type="text" class="form-control" name="destination" placeholder="e.g. Abuja, NG">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="col-md-3 form-group">
+                                    <label>Origin Lat</label>
+                                    <input type="number" step="any" class="form-control" name="origin_lat">
+                                </div>
+                                <div class="col-md-3 form-group">
+                                    <label>Origin Lng</label>
+                                    <input type="number" step="any" class="form-control" name="origin_lng">
+                                </div>
+                                <div class="col-md-3 form-group">
+                                    <label>Destination Lat</label>
+                                    <input type="number" step="any" class="form-control" name="destination_lat">
+                                </div>
+                                <div class="col-md-3 form-group">
+                                    <label>Destination Lng</label>
+                                    <input type="number" step="any" class="form-control" name="destination_lng">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="col-md-3 form-group">
+                                    <label>Current Lat</label>
+                                    <input type="number" step="any" class="form-control" name="current_lat">
+                                </div>
+                                <div class="col-md-3 form-group">
+                                    <label>Current Lng</label>
+                                    <input type="number" step="any" class="form-control" name="current_lng">
+                                </div>
+                                <div class="col-md-3 form-group">
+                                    <label>Status</label>
+                                    <select class="form-control" name="status">
+                                        <option value="pending">Pending</option>
+                                        <option value="in_transit" selected>In Transit</option>
+                                        <option value="out_for_delivery">Out for Delivery</option>
+                                        <option value="delivered">Delivered</option>
+                                        <option value="delayed">Delayed</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 form-group">
+                                    <label>Est. Delivery Date</label>
+                                    <input type="date" class="form-control" name="estimated_delivery">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="col-md-3 form-group">
+                                    <label>Weight (kg)</label>
+                                    <input type="number" step="any" class="form-control" name="weight_kg">
+                                </div>
+                                <div class="col-md-3 form-group">
+                                    <label>Package Type</label>
+                                    <input type="text" class="form-control" name="package_type" placeholder="e.g. Parcel">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="add-shipment-btn">Create Shipment</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Edit / Update Shipment Modal -->
+<div class="modal" id="edit-modal" tabindex="-1" role="dialog" style="background:rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Shipment</h5>
+                <button type="button" class="close" onclick="closeEditModal()"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-shipment-form">
+                    <input type="hidden" name="id">
+                    <div class="form-row">
+                        <div class="col-md-4 form-group">
+                            <label>Status</label>
+                            <select class="form-control" name="status">
+                                <option value="pending">Pending</option>
+                                <option value="in_transit">In Transit</option>
+                                <option value="out_for_delivery">Out for Delivery</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="delayed">Delayed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Current Lat</label>
+                            <input type="number" step="any" class="form-control" name="current_lat">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Current Lng</label>
+                            <input type="number" step="any" class="form-control" name="current_lng">
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Add Tracking History Entry (optional)</h6>
+                    <div class="form-row">
+                        <div class="col-md-4 form-group">
+                            <label>Location</label>
+                            <input type="text" class="form-control" name="history_location" placeholder="e.g. Ibadan Hub">
+                        </div>
+                        <div class="col-md-8 form-group">
+                            <label>Note</label>
+                            <input type="text" class="form-control" name="history_note" placeholder="e.g. Departed sorting facility">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="edit-shipment-btn">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="jquery.js"></script>
+<script src="popper.js"></script>
+<script src="bootstrap.min.js"></script>
+<script src="sweetalert.js"></script>
+
+<script>
+const SUPABASE_URL = "https://vqhkwwsceqcusxuykfea.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_VyGKi58RF8ZeuaoXqoOYcg_k39PaSz8";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+let currentShipments = [];
+
+// --- Auth guard: redirect to login if no active session ---
+async function checkAuth() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+        window.location.href = '../login.html';
+        return;
+    }
+    document.getElementById('admin-email-label').textContent = session.user.email;
+    document.getElementById('auth-guard-overlay').style.display = 'none';
+    document.getElementById('app-shell').style.setProperty('display', 'flex', 'important');
+    loadShipments();
+}
+checkAuth();
+
+// Re-check on auth state change (e.g. token expiry)
+sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT' || !session) {
+        window.location.href = '../login.html';
+    }
+});
+
+document.getElementById('logout-link').addEventListener('click', async function(e) {
+    e.preventDefault();
+    await sb.auth.signOut();
+    window.location.href = '../login.html';
+});
+
+// --- Sidebar panel switching ---
+document.querySelectorAll('.nav-link[data-panel]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.nav-link[data-panel]').forEach(l => l.classList.remove('active'));
+        this.classList.add('active');
+        document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById(this.dataset.panel).classList.add('active');
+    });
+});
+
+// --- Load & render shipments ---
+async function loadShipments() {
+    const { data, error } = await sb
+        .from('shipments')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        swal('Error', 'Could not load shipments: ' + error.message, 'error');
+        return;
+    }
+
+    currentShipments = data || [];
+    renderShipments(currentShipments);
+    renderStats(currentShipments);
+}
+
+function renderStats(list) {
+    document.getElementById('stat-total').textContent = list.length;
+    document.getElementById('stat-in-transit').textContent = list.filter(s => s.status === 'in_transit').length;
+    document.getElementById('stat-delivered').textContent = list.filter(s => s.status === 'delivered').length;
+    document.getElementById('stat-delayed').textContent = list.filter(s => s.status === 'delayed').length;
+}
+
+function renderShipments(list) {
+    const tbody = document.getElementById('shipments-table-body');
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No shipments yet. Add one above.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = list.map(function(s) {
+        return '<tr>' +
+            '<td><strong>' + escapeHtml(s.tracking_number) + '</strong></td>' +
+            '<td>' + escapeHtml(s.sender_name || '—') + '</td>' +
+            '<td>' + escapeHtml(s.receiver_name || '—') + '</td>' +
+            '<td>' + escapeHtml(s.origin || '—') + ' → ' + escapeHtml(s.destination || '—') + '</td>' +
+            '<td><span class="badge badge-status-' + s.status + ' text-white">' + s.status.replace(/_/g, ' ') + '</span></td>' +
+            '<td>' + (s.estimated_delivery || '—') + '</td>' +
+            '<td>' +
+                '<button class="btn btn-sm btn-outline-primary mr-1" onclick="openEditModal(\'' + s.id + '\')">Update</button>' +
+                '<button class="btn btn-sm btn-outline-danger" onclick="deleteShipment(\'' + s.id + '\')">Delete</button>' +
+            '</td>' +
+        '</tr>';
+    }).join('');
+}
+
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, function(m) {
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m];
+    });
+}
+
+// --- Search filter ---
+document.getElementById('shipment-search').addEventListener('input', function() {
+    const q = this.value.trim().toLowerCase();
+    const filtered = currentShipments.filter(s => s.tracking_number.toLowerCase().includes(q));
+    renderShipments(filtered);
+});
+
+// --- Add shipment ---
+document.getElementById('add-shipment-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('add-shipment-btn');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    const fd = new FormData(this);
+    const payload = {};
+    fd.forEach((value, key) => { payload[key] = value === '' ? null : value; });
+
+    ['origin_lat','origin_lng','destination_lat','destination_lng','current_lat','current_lng','weight_kg'].forEach(k => {
+        if (payload[k] !== null) payload[k] = parseFloat(payload[k]);
+    });
+
+    const { error } = await sb.from('shipments').insert([payload]);
+
+    btn.disabled = false;
+    btn.textContent = 'Create Shipment';
+
+    if (error) {
+        swal('Error', error.message, 'error');
+        return;
+    }
+
+    swal('Success', 'Shipment created.', 'success');
+    this.reset();
+    loadShipments();
+    document.querySelector('.nav-link[data-panel="panel-shipments"]').click();
+});
+
+// --- Edit / update shipment modal ---
+function openEditModal(id) {
+    const shipment = currentShipments.find(s => s.id === id);
+    if (!shipment) return;
+    const form = document.getElementById('edit-shipment-form');
+    form.id.value = shipment.id;
+    form.status.value = shipment.status;
+    form.current_lat.value = shipment.current_lat || '';
+    form.current_lng.value = shipment.current_lng || '';
+    form.history_location.value = '';
+    form.history_note.value = '';
+    $('#edit-modal').css('display', 'block');
+}
+
+function closeEditModal() {
+    $('#edit-modal').css('display', 'none');
+}
+
+document.getElementById('edit-shipment-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('edit-shipment-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    const fd = new FormData(this);
+    const id = fd.get('id');
+    const status = fd.get('status');
+    const current_lat = fd.get('current_lat') ? parseFloat(fd.get('current_lat')) : null;
+    const current_lng = fd.get('current_lng') ? parseFloat(fd.get('current_lng')) : null;
+    const historyLocation = fd.get('history_location');
+    const historyNote = fd.get('history_note');
+
+    const { error: updateError } = await sb
+        .from('shipments')
+        .update({ status: status, current_lat: current_lat, current_lng: current_lng })
+        .eq('id', id);
+
+    if (updateError) {
+        btn.disabled = false;
+        btn.textContent = 'Save Changes';
+        swal('Error', updateError.message, 'error');
+        return;
+    }
+
+    // Optionally log a tracking history entry
+    if (historyLocation || historyNote) {
+        await sb.from('tracking_history').insert([{
+            shipment_id: id,
+            status: status,
+            location: historyLocation || null,
+            lat: current_lat,
+            lng: current_lng,
+            note: historyNote || null
+        }]);
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+    closeEditModal();
+    swal('Updated', 'Shipment status saved.', 'success');
+    loadShipments();
+});
+
+// --- Delete shipment ---
+function deleteShipment(id) {
+    swal({
+        title: 'Delete this shipment?',
+        text: 'This cannot be undone.',
+        icon: 'warning',
+        dangerMode: true,
+        buttons: ['Cancel', 'Delete']
+    }).then(async function(confirmed) {
+        if (!confirmed) return;
+        const { error } = await sb.from('shipments').delete().eq('id', id);
+        if (error) {
+            swal('Error', error.message, 'error');
+            return;
+        }
+        swal('Deleted', 'Shipment removed.', 'success');
+        loadShipments();
+    });
+}
+</script>
+
+</body>
+</html>
