@@ -250,8 +250,9 @@ function googleTranslateElementInit() {
 							<div class="vlx-card">
 								<h3>Contact us</h3>
 								<hr>
-								<p><strong>Email:</strong> support@velorixlogistics.org</p>
-								<p><strong>Phone:</strong> Contact us via email</p>
+								<p><strong>Address:</strong> NL, RO, AMS-NL, KR</p>
+								<p><strong>Email:</strong> velorixlogistics@gmail.com</p>
+								<p><strong>Phone:</strong> +1, +31, +33, +40, +62</p>
 							</div>
 
 							<!-- Shipping details: sender / receiver -->
@@ -791,6 +792,16 @@ function googleTranslateElementInit() {
 const SUPABASE_URL = "https://vqhkwwsceqcusxuykfea.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_VyGKi58RF8ZeuaoXqoOYcg_k39PaSz8";
 const trackingSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Auto-submit if tracking number is passed in the URL (from dashboard "Track" button)
+window.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tid = urlParams.get('tid');
+    if (tid) {
+        document.getElementById('InputProduct').value = tid;
+        document.getElementById('tracking-form').dispatchEvent(new Event('submit'));
+    }
+});
 
 let trackingMap = null;
 
