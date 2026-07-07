@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
         body { background: #f5f6fa; }
         .sidebar {
@@ -541,6 +542,32 @@ const SUPABASE_URL = "https://vqhkwwsceqcusxuykfea.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_VyGKi58RF8ZeuaoXqoOYcg_k39PaSz8";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+// EmailJS
+emailjs.init('Vxd3vKx66_f0IKBBr');
+const EMAILJS_SERVICE_ID = 'service_c6ewahq';
+const EMAILJS_TEMPLATE_ID = 'template_2iu1p7i';
+
+async function sendShipmentEmail(payload) {
+    if (!payload.receiver_email) return; // no email to send to
+    try {
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            receiver_name: payload.receiver_name || 'Customer',
+            receiver_email: payload.receiver_email,
+            tracking_number: payload.tracking_number,
+            description: payload.description || '—',
+            origin: payload.origin || '—',
+            destination: payload.destination || '—',
+            shipment_date: payload.shipment_date || '—',
+            estimated_delivery: payload.estimated_delivery || '—',
+            status: (payload.status || 'pending').replace(/_/g, ' '),
+            tracking_url: window.location.origin + '/page/track.html?tid=' + encodeURIComponent(payload.tracking_number)
+        });
+        console.log('Email sent to', payload.receiver_email);
+    } catch(err) {
+        console.warn('EmailJS error (shipment still saved):', err);
+    }
+}
+
 let currentShipments = [];
 
 // --- Auth guard: redirect to login if no active session ---
@@ -728,6 +755,7 @@ document.getElementById('add-shipment-form').addEventListener('submit', async fu
     }
 
     swal('Success', 'Shipment created with tracking number ' + payload.tracking_number, 'success');
+    sendShipmentEmail(payload); // fire-and-forget — doesn't block the UI
     this.reset();
     loadShipments();
     document.querySelector('.nav-link[data-panel="panel-shipments"]').click();
