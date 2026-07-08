@@ -677,7 +677,9 @@ function renderShipments(list) {
                         '<a class="dropdown-item" href="#" onclick="openEditModal(\'' + s.id + '\');return false;">Edit</a>' +
                         '<a class="dropdown-item" href="#" onclick="trackShipment(\'' + escapeHtml(s.tracking_number) + '\');return false;">Track</a>' +
                         '<a class="dropdown-item" href="#" onclick="openHistoryModal(\'' + s.id + '\');return false;">Location History</a>' +
-                        '<a class="dropdown-item" href="#" onclick="generateShipmentPdf(\'' + s.id + '\');return false;">PDF</a>' +
+                        '<a class="dropdown-item" href="#" onclick="generatePdfClassic(\'' + s.id + '\');return false;">PDF — Classic</a>' +
+                        '<a class="dropdown-item" href="#" onclick="generatePdfModern(\'' + s.id + '\');return false;">PDF — Modern</a>' +
+                        '<a class="dropdown-item" href="#" onclick="generatePdfMinimal(\'' + s.id + '\');return false;">PDF — Minimal</a>' +
                         '<div class="dropdown-divider"></div>' +
                         '<a class="dropdown-item text-danger" href="#" onclick="deleteShipment(\'' + s.id + '\');return false;">Delete</a>' +
                     '</div>' +
@@ -888,51 +890,377 @@ function closeHistoryModal() {
     $('#history-modal').css('display', 'none');
 }
 
-// --- PDF generation (client-side, no server needed) ---
-function generateShipmentPdf(id) {
+// --- PDF helpers ---
+function _pdfStampColor(status) {
+    if (!status) return [150,150,150];
+    const s = status.toLowerCase();
+    if (s.includes('delivered')) return [34,139,34];
+    if (s.includes('transit')) return [30,100,200];
+    return [232,89,68]; // dispatched / default coral
+}
+function _pdfStampLabel(status) {
+    if (!status) return 'PROCESSING';
+    const s = status.toLowerCase();
+    if (s.includes('delivered')) return 'DELIVERED';
+    if (s.includes('transit')) return 'IN TRANSIT';
+    return 'DISPATCHED';
+}
+function _pdfTerms() {
+    return 'Any shortage or damage to goods must be reported to Velorix Logistics within 72 hours of delivery. ' +
+        'Velorix Logistics is not liable for delays caused by customs, weather, or force majeure events. ' +
+        'All shipments are subject to Velorix Logistics Terms & Conditions. For support: support@velorixlogistics.com';
+}
+function _pdfWrapText(doc, text, x, y, maxWidth, lineHeight) {
+    const lines = doc.splitTextToSize(text, maxWidth);
+    doc.text(lines, x, y);
+    return y + lines.length * lineHeight;
+}
+
+// --- PDF 1: Classic ---
+function generatePdfClassic(id) {
     const s = currentShipments.find(sh => sh.id === id);
     if (!s) return;
-
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    let y = 20;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const W = 210, H = 297;
+    const coral = [232,89,68], dark = [30,30,30], gray = [245,245,245], midgray = [180,180,180];
+    const stampColor = _pdfStampColor(s.status);
+    const stampLabel = _pdfStampLabel(s.status);
 
-    doc.setFontSize(18);
-    doc.text('Velorix Logistics — Shipment Details', 14, y);
+    // Header bar
+    doc.setFillColor(...coral);
+    doc.rect(0, 0, W, 22, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica','bold');
+    doc.text('VELORIX LOGISTICS SERVICES', 14, 14);
+    doc.setFontSize(8);
+    doc.setFont('helvetica','normal');
+    doc.text('www.velorixlogistics.com  |  support@velorixlogistics.com', W - 14, 10, {align:'right'});
+    doc.text('Tel: +1 800 VELORIX  |  24/7 Customer Support', W - 14, 15, {align:'right'});
+
+    // Title banner
+    doc.setFillColor(...dark);
+    doc.rect(0, 22, W, 12, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(13);
+    doc.setFont('helvetica','bold');
+    doc.text('SHIPMENT RECEIPT', W/2, 30, {align:'center'});
+
+    // Tracking strip
+    doc.setFillColor(...gray);
+    doc.rect(0, 34, W, 10, 'F');
+    doc.setTextColor(...dark);
+    doc.setFontSize(9);
+    doc.setFont('helvetica','bold');
+    doc.text('Tracking ID: ' + (s.tracking_number || '—'), 14, 40);
+    doc.text('Shipment Date: ' + (s.shipment_date || '—'), W - 14, 40, {align:'right'});
+
+    // Sender / Receiver two-column
+    let y = 52;
+    doc.setFillColor(...coral);
+    doc.rect(14, y, 85, 7, 'F');
+    doc.rect(111, y, 85, 7, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(9);
+    doc.setFont('helvetica','bold');
+    doc.text('SENDER DETAILS', 56, y+5, {align:'center'});
+    doc.text('RECEIVER DETAILS', 153, y+5, {align:'center'});
     y += 10;
-    doc.setFontSize(11);
-    doc.text('Tracking Number: ' + s.tracking_number, 14, y); y += 8;
-    doc.text('Status: ' + s.status.replace(/_/g, ' '), 14, y); y += 8;
-    doc.text('Description: ' + (s.description || '—'), 14, y); y += 10;
 
-    doc.setFontSize(13);
-    doc.text('Sender', 14, y); y += 7;
-    doc.setFontSize(11);
-    doc.text('Name: ' + (s.sender_name || '—'), 14, y); y += 6;
-    doc.text('Address: ' + (s.sender_address || '—'), 14, y); y += 6;
-    doc.text('Email: ' + (s.sender_email || '—'), 14, y); y += 6;
-    doc.text('Phone: ' + (s.sender_phone || '—'), 14, y); y += 10;
+    doc.setTextColor(...dark);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    const leftX = 14, rightX = 111;
+    const fields = [
+        ['Name', s.sender_name, s.receiver_name],
+        ['Address', s.sender_address, s.receiver_address],
+        ['Email', s.sender_email, s.receiver_email],
+        ['Phone', s.sender_phone, s.receiver_phone],
+    ];
+    fields.forEach(([label, lval, rval]) => {
+        doc.setFont('helvetica','bold'); doc.text(label + ':', leftX, y); doc.text(label + ':', rightX, y);
+        doc.setFont('helvetica','normal');
+        doc.text(lval || '—', leftX + 18, y);
+        doc.text(rval || '—', rightX + 18, y);
+        y += 7;
+    });
+    // Origin/Destination under receiver
+    doc.setFont('helvetica','bold'); doc.text('Origin:', leftX, y); doc.text('Destination:', rightX, y);
+    doc.setFont('helvetica','normal');
+    doc.text(s.origin || '—', leftX + 18, y); doc.text(s.destination || '—', rightX + 26, y);
+    y += 12;
 
-    doc.setFontSize(13);
-    doc.text('Receiver', 14, y); y += 7;
-    doc.setFontSize(11);
-    doc.text('Name: ' + (s.receiver_name || '—'), 14, y); y += 6;
-    doc.text('Address: ' + (s.receiver_address || '—'), 14, y); y += 6;
-    doc.text('Email: ' + (s.receiver_email || '—'), 14, y); y += 6;
-    doc.text('Phone: ' + (s.receiver_phone || '—'), 14, y); y += 10;
+    // Parcel + Delivery two-column bars
+    doc.setFillColor(30,30,30);
+    doc.rect(14, y, 85, 7, 'F');
+    doc.setFillColor(...coral);
+    doc.rect(111, y, 85, 7, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('PARCEL DESCRIPTION', 56, y+5, {align:'center'});
+    doc.text('EXPECTED DELIVERY DATE', 153, y+5, {align:'center'});
+    y += 10;
 
-    doc.setFontSize(13);
-    doc.text('Shipment Info', 14, y); y += 7;
-    doc.setFontSize(11);
-    doc.text('Origin: ' + (s.origin || '—'), 14, y); y += 6;
-    doc.text('Destination: ' + (s.destination || '—'), 14, y); y += 6;
-    doc.text('Weight: ' + (s.weight_kg ? s.weight_kg + ' kg' : '—'), 14, y); y += 6;
-    doc.text('Package Type: ' + (s.package_type || '—'), 14, y); y += 6;
-    doc.text('Shipment Date: ' + (s.shipment_date || '—'), 14, y); y += 6;
-    doc.text('Estimated Delivery: ' + (s.estimated_delivery || '—'), 14, y); y += 6;
-    if (s.shipment_comments) { doc.text('Comments: ' + s.shipment_comments, 14, y); y += 6; }
+    doc.setTextColor(...dark);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text('Description: ' + (s.description || '—'), leftX, y);
+    doc.text(s.estimated_delivery || '—', 153, y, {align:'center'});
+    y += 6;
+    doc.text('Weight: ' + (s.weight_kg ? s.weight_kg + ' kg' : '—'), leftX, y);
+    doc.text('Package Type: ' + (s.package_type || '—'), leftX, y + 6);
+    y += 16;
+    if (s.shipment_comments) {
+        doc.setFont('helvetica','italic');
+        doc.text('Comments: ' + s.shipment_comments, leftX, y); y += 7;
+        doc.setFont('helvetica','normal');
+    }
 
-    doc.save(s.tracking_number + '.pdf');
+    // Terms
+    y += 4;
+    doc.setDrawColor(...midgray); doc.line(14, y, W-14, y); y += 5;
+    doc.setFontSize(7.5); doc.setTextColor(100,100,100);
+    y = _pdfWrapText(doc, _pdfTerms(), 14, y, W-28, 4.5);
+
+    // Stamp
+    y += 8;
+    doc.setFontSize(22); doc.setFont('helvetica','bold');
+    doc.setTextColor(...stampColor);
+    doc.text(stampLabel, W/2, y, {align:'center'});
+    doc.setDrawColor(...stampColor);
+    doc.setLineWidth(1.5);
+    const tw = doc.getTextWidth(stampLabel);
+    doc.rect(W/2 - tw/2 - 6, y - 14, tw + 12, 18);
+
+    // Footer
+    doc.setFillColor(...dark);
+    doc.rect(0, H-14, W, 14, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Velorix Logistics Services — Reliable Worldwide Shipping', W/2, H-6, {align:'center'});
+
+    doc.save(s.tracking_number + '_Classic.pdf');
+}
+
+// --- PDF 2: Modern ---
+function generatePdfModern(id) {
+    const s = currentShipments.find(sh => sh.id === id);
+    if (!s) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const W = 210, H = 297;
+    const coral = [232,89,68], darkbg = [22,26,35], card = [240,242,247], mid = [100,100,110];
+    const stampColor = _pdfStampColor(s.status);
+    const stampLabel = _pdfStampLabel(s.status);
+
+    // Dark header
+    doc.setFillColor(...darkbg);
+    doc.rect(0, 0, W, 38, 'F');
+    doc.setTextColor(...coral);
+    doc.setFontSize(20); doc.setFont('helvetica','bold');
+    doc.text('VELORIX', 14, 18);
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.setTextColor(200,200,200);
+    doc.text('LOGISTICS SERVICES', 14, 24);
+    doc.text('SHIPMENT RECEIPT', 14, 30);
+    // Right side in header
+    doc.setTextColor(255,255,255); doc.setFontSize(9);
+    doc.text('Tracking #', W-14, 14, {align:'right'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...coral);
+    doc.text(s.tracking_number || '—', W-14, 21, {align:'right'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(200,200,200);
+    doc.text('Date: ' + (s.shipment_date || '—'), W-14, 27, {align:'right'});
+    doc.text('Status: ' + (s.status || '—').replace(/_/g,' ').toUpperCase(), W-14, 33, {align:'right'});
+
+    // Coral accent line
+    doc.setFillColor(...coral);
+    doc.rect(0, 38, W, 2, 'F');
+
+    let y = 48;
+
+    // Sender card
+    doc.setFillColor(...card);
+    doc.roundedRect(14, y, 85, 45, 3, 3, 'F');
+    doc.setFillColor(...coral);
+    doc.roundedRect(14, y, 85, 10, 3, 3, 'F');
+    doc.rect(14, y+5, 85, 5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('SENDER', 56, y+7, {align:'center'});
+    doc.setTextColor(50,50,50); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    let cy = y + 16;
+    [['Name', s.sender_name],['Address', s.sender_address],['Email', s.sender_email],['Phone', s.sender_phone]].forEach(([l,v]) => {
+        doc.setFont('helvetica','bold'); doc.text(l+':', 18, cy);
+        doc.setFont('helvetica','normal'); doc.text(v||'—', 35, cy); cy += 6;
+    });
+
+    // Receiver card
+    doc.setFillColor(...card);
+    doc.roundedRect(111, y, 85, 45, 3, 3, 'F');
+    doc.setFillColor(...darkbg);
+    doc.roundedRect(111, y, 85, 10, 3, 3, 'F');
+    doc.rect(111, y+5, 85, 5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('RECEIVER', 153, y+7, {align:'center'});
+    doc.setTextColor(50,50,50); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    cy = y + 16;
+    [['Name', s.receiver_name],['Address', s.receiver_address],['Email', s.receiver_email],['Phone', s.receiver_phone]].forEach(([l,v]) => {
+        doc.setFont('helvetica','bold'); doc.text(l+':', 115, cy);
+        doc.setFont('helvetica','normal'); doc.text(v||'—', 132, cy); cy += 6;
+    });
+
+    y += 52;
+
+    // Route strip
+    doc.setFillColor(...darkbg);
+    doc.rect(14, y, 182, 14, 'F');
+    doc.setTextColor(...coral); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(s.origin || '—', 20, y+9);
+    doc.setTextColor(255,255,255);
+    doc.text('→', 105, y+9, {align:'center'});
+    doc.setTextColor(...coral);
+    doc.text(s.destination || '—', 190, y+9, {align:'right'});
+    y += 20;
+
+    // Parcel info card
+    doc.setFillColor(...card);
+    doc.roundedRect(14, y, 182, 36, 3, 3, 'F');
+    doc.setFillColor(...coral);
+    doc.roundedRect(14, y, 182, 9, 3, 3, 'F');
+    doc.rect(14, y+4, 182, 5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('PARCEL DETAILS', 105, y+7, {align:'center'});
+    doc.setTextColor(50,50,50); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    let py = y + 16;
+    doc.setFont('helvetica','bold'); doc.text('Description:', 18, py); doc.setFont('helvetica','normal'); doc.text(s.description||'—', 50, py);
+    doc.setFont('helvetica','bold'); doc.text('Weight:', 120, py); doc.setFont('helvetica','normal'); doc.text((s.weight_kg ? s.weight_kg+' kg' : '—'), 140, py);
+    py += 7;
+    doc.setFont('helvetica','bold'); doc.text('Package Type:', 18, py); doc.setFont('helvetica','normal'); doc.text(s.package_type||'—', 50, py);
+    doc.setFont('helvetica','bold'); doc.text('Est. Delivery:', 120, py); doc.setFont('helvetica','normal'); doc.text(s.estimated_delivery||'—', 150, py);
+    if (s.shipment_comments) { py += 7; doc.setFont('helvetica','italic'); doc.text('Comments: ' + s.shipment_comments, 18, py); }
+    y += 42;
+
+    // Terms
+    doc.setFontSize(7.5); doc.setTextColor(...mid); doc.setFont('helvetica','normal');
+    y = _pdfWrapText(doc, _pdfTerms(), 14, y+4, W-28, 4.5);
+
+    // Stamp
+    y += 8;
+    doc.setFontSize(24); doc.setFont('helvetica','bold');
+    doc.setTextColor(...stampColor);
+    doc.text(stampLabel, W/2, y, {align:'center'});
+    doc.setDrawColor(...stampColor); doc.setLineWidth(1.8);
+    const tw = doc.getTextWidth(stampLabel);
+    doc.roundedRect(W/2 - tw/2 - 8, y-16, tw+16, 22, 3, 3);
+
+    // Footer line
+    doc.setFillColor(...coral);
+    doc.rect(0, H-8, W, 8, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.text('Velorix Logistics Services  |  support@velorixlogistics.com  |  www.velorixlogistics.com', W/2, H-3, {align:'center'});
+
+    doc.save(s.tracking_number + '_Modern.pdf');
+}
+
+// --- PDF 3: Minimal ---
+function generatePdfMinimal(id) {
+    const s = currentShipments.find(sh => sh.id === id);
+    if (!s) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const W = 210, H = 297;
+    const dark = [20,20,20], mid = [100,100,100], lite = [220,220,220];
+    const stampColor = _pdfStampColor(s.status);
+    const stampLabel = _pdfStampLabel(s.status);
+
+    // Top rule
+    doc.setDrawColor(...dark); doc.setLineWidth(0.8);
+    doc.line(14, 14, W-14, 14);
+
+    // Company name
+    doc.setTextColor(...dark); doc.setFontSize(18); doc.setFont('helvetica','bold');
+    doc.text('VELORIX', 14, 22);
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...mid);
+    doc.text('LOGISTICS SERVICES', 14, 27);
+
+    // Tracking number top right
+    doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(...dark);
+    doc.text('SHIPMENT RECEIPT', W-14, 20, {align:'right'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...mid);
+    doc.text(s.tracking_number || '—', W-14, 26, {align:'right'});
+
+    doc.setDrawColor(...dark); doc.line(14, 30, W-14, 30);
+    let y = 38;
+
+    // Section: Dates
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...mid);
+    doc.text('SHIPMENT DATE', 14, y); doc.text('EXPECTED DELIVERY', W/2, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(...dark); doc.setFontSize(10);
+    doc.text(s.shipment_date || '—', 14, y+6); doc.text(s.estimated_delivery || '—', W/2, y+6);
+    y += 16;
+
+    doc.setDrawColor(...lite); doc.setLineWidth(0.3); doc.line(14, y, W-14, y); y += 8;
+
+    // Section: Sender / Receiver
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...mid);
+    doc.text('SENDER', 14, y); doc.text('RECEIVER', W/2, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setTextColor(...dark); doc.setFontSize(9);
+    [
+        [s.sender_name, s.receiver_name],
+        [s.sender_address, s.receiver_address],
+        [s.sender_email, s.receiver_email],
+        [s.sender_phone, s.receiver_phone],
+    ].forEach(([l,r]) => {
+        doc.text(l||'—', 14, y); doc.text(r||'—', W/2, y); y += 6;
+    });
+    y += 4;
+
+    doc.line(14, y, W-14, y); y += 8;
+
+    // Section: Route
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...mid);
+    doc.text('ORIGIN', 14, y); doc.text('DESTINATION', W/2, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setTextColor(...dark); doc.setFontSize(10);
+    doc.text(s.origin||'—', 14, y); doc.text(s.destination||'—', W/2, y); y += 12;
+
+    doc.line(14, y, W-14, y); y += 8;
+
+    // Section: Parcel
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...mid);
+    doc.text('PARCEL DESCRIPTION', 14, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setTextColor(...dark); doc.setFontSize(9);
+    const parcelRows = [
+        ['Description', s.description || '—'],
+        ['Weight', s.weight_kg ? s.weight_kg + ' kg' : '—'],
+        ['Package Type', s.package_type || '—'],
+    ];
+    parcelRows.forEach(([l,v]) => {
+        doc.setFont('helvetica','bold'); doc.text(l + ':', 14, y);
+        doc.setFont('helvetica','normal'); doc.text(v, 55, y); y += 7;
+    });
+    if (s.shipment_comments) {
+        doc.setFont('helvetica','italic'); doc.setTextColor(...mid);
+        doc.text('Comments: ' + s.shipment_comments, 14, y); y += 7;
+    }
+    y += 4;
+
+    doc.setDrawColor(...dark); doc.setLineWidth(0.3); doc.line(14, y, W-14, y); y += 8;
+
+    // Terms
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...mid);
+    y = _pdfWrapText(doc, _pdfTerms(), 14, y, W-28, 4.5);
+
+    // Stamp — simple text, no box
+    y += 10;
+    doc.setFontSize(28); doc.setFont('helvetica','bold');
+    doc.setTextColor(...stampColor);
+    doc.text(stampLabel, W/2, y, {align:'center'});
+
+    // Footer rule
+    doc.setDrawColor(...dark); doc.setLineWidth(0.8);
+    doc.line(14, H-14, W-14, H-14);
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...mid);
+    doc.text('Velorix Logistics Services  |  support@velorixlogistics.com', W/2, H-9, {align:'center'});
+
+    doc.save(s.tracking_number + '_Minimal.pdf');
 }
 
 // --- Delete shipment ---
