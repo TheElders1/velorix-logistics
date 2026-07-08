@@ -283,7 +283,7 @@ function googleTranslateElementInit() {
 
 						<div id="tracking-result" style="display:none;" class="d-flex flex-column gap-20">
 
-							<!-- Status banner + progress bar -->
+							<!-- 1. Status banner + animated progress bar -->
 							<div class="vlx-track-header">
 								<div id="vlx-status-banner" class="vlx-status-banner"></div>
 								<div class="vlx-progress-timeline">
@@ -293,12 +293,14 @@ function googleTranslateElementInit() {
 									</div>
 									<div class="vlx-progress-track">
 										<div id="vlx-progress-fill" class="vlx-progress-fill"></div>
-										<div id="vlx-progress-thumb" class="vlx-progress-thumb"></div>
+										<div id="vlx-progress-thumb" class="vlx-progress-thumb">
+											<div class="vlx-thumb-inner"></div>
+										</div>
 									</div>
 								</div>
 							</div>
 
-							<!-- Contact us card -->
+							<!-- 2. Contact us -->
 							<div class="vlx-card">
 								<h3>Contact us</h3>
 								<hr>
@@ -307,7 +309,13 @@ function googleTranslateElementInit() {
 								<p><strong>Phone:</strong> +1, +31, +33, +40, +49, +62</p>
 							</div>
 
-							<!-- Shipping details: sender / receiver -->
+							<!-- 3. Parcel image -->
+							<div class="vlx-card" id="vlx-image-card" style="display:none;">
+								<h3>Parcel Image</h3>
+								<img id="vlx-parcel-image" src="" alt="Parcel" style="width:100%;border-radius:8px;margin-top:10px;object-fit:cover;max-height:260px;">
+							</div>
+
+							<!-- 4. From / To shipping details -->
 							<div class="vlx-card">
 								<div class="vlx-address-grid">
 									<div>
@@ -325,7 +333,7 @@ function googleTranslateElementInit() {
 								</div>
 							</div>
 
-							<!-- Tracking data table -->
+							<!-- 5. Tracking data table -->
 							<div class="vlx-card">
 								<div class="vlx-table-row"><span>Tracking ID:</span><strong id="vlx-tid"></strong></div>
 								<div class="vlx-table-row"><span>Description:</span><span id="vlx-description">—</span></div>
@@ -337,7 +345,7 @@ function googleTranslateElementInit() {
 								<div class="vlx-table-row"><span>Shipped by:</span><span>Velorix Logistics Services</span></div>
 							</div>
 
-							<!-- Map & location history -->
+							<!-- 6. Location history + map -->
 							<div class="vlx-card">
 								<h3>Location history</h3>
 								<div id="tracking-map" style="height:320px; width:100%; border-radius:8px; margin: 14px 0;"></div>
@@ -352,38 +360,56 @@ function googleTranslateElementInit() {
 								--vlx-accent: #E04A3A;
 								--vlx-text: #2D3748;
 								--vlx-muted: #718096;
-								--vlx-bg-off: #F7FAFC;
 							}
+
+							/* Status banner */
 							.vlx-status-banner {
 								font-size: 20px; font-weight: 700; color: var(--vlx-text);
-								margin-bottom: 4px;
+								margin-bottom: 10px;
 							}
+
+							/* Progress bar */
 							.vlx-progress-timeline { margin-top: 6px; }
 							.vlx-timeline-labels {
 								display: flex; justify-content: space-between;
-								font-size: 12px; color: var(--vlx-muted); margin-bottom: 8px;
+								font-size: 12px; color: var(--vlx-muted); margin-bottom: 10px;
 							}
-							.vlx-timeline-labels small { color: var(--vlx-muted); }
 							.vlx-progress-track {
 								position: relative; height: 6px; background: #E6E9EE;
-								border-radius: 6px; margin: 0 4px;
+								border-radius: 6px; margin: 0 10px;
 							}
 							.vlx-progress-fill {
 								position: absolute; top: 0; left: 0; height: 100%; width: 0%;
 								background: var(--vlx-accent); border-radius: 6px;
-								transition: width 0.8s ease;
+								transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 							}
-							.vlx-progress-fill.is-delayed { background: #b3261e; }
-							.vlx-progress-fill.is-cancelled { background: #a0aec0; }
 							.vlx-progress-thumb {
 								position: absolute; top: 50%; left: 0%;
-								width: 16px; height: 16px; border-radius: 50%;
-								background: var(--vlx-accent); border: 3px solid #fff;
+								width: 22px; height: 22px; border-radius: 50%;
+								background: var(--vlx-accent);
+								border: 3px solid #fff;
 								box-shadow: 0 0 0 2px var(--vlx-accent);
 								transform: translate(-50%, -50%);
-								transition: left 0.8s ease;
+								transition: left 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+								display: flex; align-items: center; justify-content: center;
+							}
+							.vlx-thumb-inner {
+								width: 8px; height: 8px; border-radius: 50%;
+								border: 2px solid rgba(255,255,255,0.9);
+								border-top-color: transparent;
+								animation: vlxThumbSpin 0.8s linear infinite;
+							}
+							@keyframes vlxThumbSpin {
+								to { transform: rotate(360deg); }
+							}
+							/* Stop spinning once progress is settled */
+							.vlx-progress-thumb.is-settled .vlx-thumb-inner {
+								animation: none;
+								border: none;
+								background: rgba(255,255,255,0.9);
 							}
 
+							/* Cards */
 							.vlx-card {
 								background: #fff; border-radius: 10px; padding: 20px;
 								border: 1px solid #EDF2F7;
@@ -392,12 +418,8 @@ function googleTranslateElementInit() {
 							.vlx-card h4 { font-size: 15px; font-weight: 600; color: var(--vlx-text); margin-bottom: 8px; }
 							.vlx-card p { font-size: 14px; color: var(--vlx-muted); }
 
-							.vlx-address-grid {
-								display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
-							}
-							@media (max-width: 575.98px) {
-								.vlx-address-grid { grid-template-columns: 1fr; }
-							}
+							.vlx-address-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+							@media (max-width: 575.98px) { .vlx-address-grid { grid-template-columns: 1fr; } }
 
 							.vlx-table-row {
 								display: flex; justify-content: space-between; gap: 12px;
@@ -421,11 +443,13 @@ function googleTranslateElementInit() {
 								width: 100%;
 							}
 							.btn-track-more:hover { background: #c73f31; color: #fff; }
+
 							@keyframes vlxSlideUp {
 								from { opacity: 0; transform: translateY(20px); }
 								to { opacity: 1; transform: translateY(0); }
 							}
 						</style>
+
 
 					</div>
 					<!-- cost-calculate -->
@@ -878,11 +902,14 @@ function formatDate(d) {
     return dt.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function renderStatusAndProgress(shipment) {
-    const status = shipment.status;
+function renderStatusAndProgress(shipment, latestHistory) {
+    // Status banner — from latest history entry if available, else shipment status
     const banner = document.getElementById('vlx-status-banner');
-    banner.textContent = (STATUS_ICON[status] || '📍') + ' ' + (STATUS_LABELS[status] || status);
-    banner.style.color = (status === 'delayed') ? '#b3261e' : (status === 'cancelled' ? '#718096' : '#2D3748');
+    if (latestHistory && latestHistory.status) {
+        banner.textContent = latestHistory.status; // admin types full text incl. emojis
+    } else {
+        banner.textContent = (STATUS_ICON[shipment.status] || '📍') + ' ' + (STATUS_LABELS[shipment.status] || shipment.status);
+    }
 
     document.getElementById('vlx-ship-date').textContent = formatDate(shipment.shipment_date);
     document.getElementById('vlx-eta-date').textContent = formatDate(shipment.estimated_delivery);
@@ -890,23 +917,41 @@ function renderStatusAndProgress(shipment) {
     const fillEl = document.getElementById('vlx-progress-fill');
     const thumbEl = document.getElementById('vlx-progress-thumb');
 
-    fillEl.classList.remove('is-delayed', 'is-cancelled');
-
-    if (status === 'cancelled') {
-        fillEl.style.width = '0%';
-        thumbEl.style.left = '0%';
-        fillEl.classList.add('is-cancelled');
-        return;
+    // Get percentage — from latest history entry if set, else auto from status
+    let percent = 0;
+    if (latestHistory && latestHistory.progress_percent != null) {
+        percent = parseInt(latestHistory.progress_percent, 10);
+    } else {
+        const TRACKING_STEPS = ['pending', 'in_transit', 'out_for_delivery', 'delivered'];
+        const effectiveStatus = shipment.status === 'delayed' ? 'in_transit' : shipment.status;
+        const idx = TRACKING_STEPS.indexOf(effectiveStatus);
+        percent = idx === -1 ? 0 : Math.round(((idx + 1) / TRACKING_STEPS.length) * 100);
     }
+    if (shipment.status === 'cancelled') percent = 0;
 
-    const effectiveStatus = status === 'delayed' ? 'in_transit' : status;
-    const idx = TRACKING_STEPS.indexOf(effectiveStatus);
-    const activeIdx = idx === -1 ? 0 : idx;
-    const percent = Math.round(((activeIdx + 1) / TRACKING_STEPS.length) * 100);
+    // Reset to 0 first so animation fires cleanly
+    fillEl.style.transition = 'none';
+    thumbEl.style.transition = 'none';
+    fillEl.style.width = '0%';
+    thumbEl.style.left = '0%';
+    thumbEl.classList.remove('is-settled');
 
-    fillEl.style.width = percent + '%';
-    thumbEl.style.left = percent + '%';
-    if (status === 'delayed') fillEl.classList.add('is-delayed');
+    // Small delay then animate to target
+    setTimeout(function() {
+        fillEl.style.transition = 'width 1.2s cubic-bezier(0.4, 0, 0.2, 1)';
+        thumbEl.style.transition = 'left 1.2s cubic-bezier(0.4, 0, 0.2, 1)';
+        fillEl.style.width = percent + '%';
+        thumbEl.style.left = percent + '%';
+
+        // Stop spinning after animation completes
+        setTimeout(function() {
+            thumbEl.classList.add('is-settled');
+        }, 1300);
+    }, 100);
+
+    // Status table highlight — from latest history or shipment status
+    const statusText = latestHistory && latestHistory.status ? latestHistory.status : ((STATUS_ICON[shipment.status] || '📍') + ' ' + (STATUS_LABELS[shipment.status] || shipment.status));
+    document.getElementById('vlx-status-highlight').textContent = statusText;
 }
 
 const PIPELINE_STEPS = [
@@ -989,8 +1034,17 @@ document.getElementById('tracking-form').addEventListener('submit', async functi
         return;
     }
 
-    // Status banner + progress bar
-    renderStatusAndProgress(shipment);
+    // Fetch tracking history FIRST (most recent first) — drives status banner + progress
+    const { data: history } = await trackingSupabase
+        .from('tracking_history')
+        .select('*')
+        .eq('shipment_id', shipment.id)
+        .order('created_at', { ascending: false });
+
+    const latestHistory = (history && history.length) ? history[0] : null;
+
+    // Status banner + animated progress bar
+    renderStatusAndProgress(shipment, latestHistory);
 
     // Shipping details (sender / receiver)
     document.getElementById('vlx-sender-name').textContent = shipment.sender_name || '—';
@@ -1003,29 +1057,32 @@ document.getElementById('tracking-form').addEventListener('submit', async functi
     document.getElementById('vlx-receiver-email').textContent = shipment.receiver_email ? 'Email: ' + shipment.receiver_email : '';
     document.getElementById('vlx-receiver-phone').textContent = shipment.receiver_phone ? 'Phone: ' + shipment.receiver_phone : '';
 
+    // Parcel image
+    const imageCard = document.getElementById('vlx-image-card');
+    const imageEl = document.getElementById('vlx-parcel-image');
+    if (shipment.package_image_url) {
+        imageEl.src = shipment.package_image_url;
+        imageCard.style.display = 'block';
+    } else {
+        imageCard.style.display = 'none';
+    }
+
     // Tracking data table
     document.getElementById('vlx-tid').textContent = shipment.tracking_number;
     document.getElementById('vlx-description').textContent = shipment.description || '—';
-    document.getElementById('vlx-status-highlight').textContent = (STATUS_ICON[shipment.status] || '📍') + ' ' + (STATUS_LABELS[shipment.status] || shipment.status);
     document.getElementById('vlx-origin').textContent = shipment.origin || '—';
     document.getElementById('vlx-destination').textContent = shipment.destination || '—';
     document.getElementById('vlx-eta-2').textContent = formatDate(shipment.estimated_delivery);
     document.getElementById('vlx-shipdate-2').textContent = formatDate(shipment.shipment_date);
 
-    // Fetch tracking history (most recent first, matching the "location history" list style)
-    const { data: history } = await trackingSupabase
-        .from('tracking_history')
-        .select('*')
-        .eq('shipment_id', shipment.id)
-        .order('created_at', { ascending: false });
-
+    // Location history list
     const historyEl = document.getElementById('vlx-live-timeline');
     historyEl.innerHTML = '';
     (history || []).forEach(function(h) {
         const item = document.createElement('div');
         item.className = 'vlx-timeline-item';
         const dateStr = formatDate(h.created_at);
-        const desc = (h.location ? h.location + ' — ' : '') + h.status.replace(/_/g, ' ') + (h.note ? ': ' + h.note : '');
+        const desc = (h.location ? h.location + (h.status ? ' — ' : '') : '') + (h.status || '') + (h.note ? ': ' + h.note : '');
         item.innerHTML = '<div class="vlx-timeline-date">' + dateStr + '</div><p class="vlx-timeline-desc">' + desc + '</p>';
         historyEl.appendChild(item);
     });
