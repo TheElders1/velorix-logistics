@@ -501,9 +501,13 @@
                     <h6>Add Location History Entry (optional)</h6>
                     <small class="text-muted d-block mb-3">This updates what's shown on the public tracking page — status banner, progress bar position, and map pin.</small>
                     <div class="form-row">
-                        <div class="col-md-12 form-group">
+                        <div class="col-md-8 form-group">
                             <label>Status Text <small class="text-muted">(supports emojis — e.g. ✅ Arrived in Indonesia, 🚚 In Transit)</small></label>
                             <input type="text" class="form-control" name="history_location" placeholder="e.g. ✅ Arrived in Indonesia">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Date <small class="text-muted">(shown on tracking page)</small></label>
+                            <input type="date" class="form-control" name="history_date">
                         </div>
                     </div>
                     <div class="form-row">
@@ -792,6 +796,7 @@ function openEditModal(id) {
     form.history_location.value = '';
     form.history_note.value = '';
     if (form.history_progress) form.history_progress.value = '';
+    if (form.history_date) form.history_date.value = '';
     $('#edit-modal').css('display', 'block');
 }
 
@@ -810,6 +815,7 @@ document.getElementById('edit-shipment-form').addEventListener('submit', async f
     const historyStatusText = fd.get('history_location'); // custom status text with emojis
     const historyNote = fd.get('history_note');
     const historyProgress = fd.get('history_progress');
+    const historyDate = fd.get('history_date'); // admin-chosen date shown on tracking page
 
     const payload = {};
     EDIT_FIELDS.forEach(function(key) {
@@ -834,7 +840,7 @@ document.getElementById('edit-shipment-form').addEventListener('submit', async f
         await sb.from('tracking_history').insert([{
             shipment_id: id,
             status: historyStatusText || payload.status,
-            location: null,
+            location: historyDate || null,
             lat: payload.current_lat,
             lng: payload.current_lng,
             note: historyNote || null,

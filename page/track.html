@@ -1080,8 +1080,9 @@ document.getElementById('tracking-form').addEventListener('submit', async functi
     (history || []).forEach(function(h) {
         const item = document.createElement('div');
         item.className = 'vlx-timeline-item';
-        const dateStr = formatDate(h.created_at);
-        const desc = (h.location ? h.location + (h.status ? ' — ' : '') : '') + (h.status || '') + (h.note ? ': ' + h.note : '');
+        // Use admin-chosen date (stored in location field) if set, otherwise fall back to created_at
+        const dateStr = h.location ? formatDate(h.location) : formatDate(h.created_at);
+        const desc = (h.status || '') + (h.note ? ': ' + h.note : '');
         item.innerHTML = '<div class="vlx-timeline-date">' + dateStr + '</div><p class="vlx-timeline-desc">' + desc + '</p>';
         historyEl.appendChild(item);
     });
