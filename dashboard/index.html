@@ -680,6 +680,7 @@ function renderShipments(list) {
                         '<a class="dropdown-item" href="#" onclick="generatePdfClassic(\'' + s.id + '\');return false;">PDF — Classic</a>' +
                         '<a class="dropdown-item" href="#" onclick="generatePdfModern(\'' + s.id + '\');return false;">PDF — Modern</a>' +
                         '<a class="dropdown-item" href="#" onclick="generatePdfMinimal(\'' + s.id + '\');return false;">PDF — Minimal</a>' +
+                        '<a class="dropdown-item" href="#" onclick="generatePdfReceipt(\'' + s.id + '\');return false;">PDF — Receipt</a>' +
                         '<div class="dropdown-divider"></div>' +
                         '<a class="dropdown-item text-danger" href="#" onclick="deleteShipment(\'' + s.id + '\');return false;">Delete</a>' +
                     '</div>' +
@@ -1261,6 +1262,144 @@ function generatePdfMinimal(id) {
     doc.text('Velorix Logistics Services  |  support@velorixlogistics.com', W/2, H-9, {align:'center'});
 
     doc.save(s.tracking_number + '_Minimal.pdf');
+}
+
+// --- PDF 4: Receipt (matches EagleXpress reference layout) ---
+function generatePdfReceipt(id) {
+    const s = currentShipments.find(sh => sh.id === id);
+    if (!s) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const W = 210, H = 297;
+    const coral = [210,40,40];
+    const teal  = [0,160,160];
+    const stampColor = _pdfStampColor(s.status);
+    const stampLabel = _pdfStampLabel(s.status);
+
+    // ── Watermark: repeated "VELORIX LOGISTICS" diagonal text ──
+    doc.saveGraphicsState();
+    doc.setGState(new doc.GState({ opacity: 0.06 }));
+    doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(0,0,0);
+    for (let wy = 18; wy < H; wy += 22) {
+        for (let wx = -10; wx < W + 10; wx += 55) {
+            doc.text('VELORIX LOGISTICS', wx, wy, { angle: 25 });
+        }
+    }
+    doc.restoreGraphicsState();
+
+    // ── Header: logo left, contact right ──
+    // Logo block (text-based)
+    doc.setFontSize(22); doc.setFont('helvetica','bold'); doc.setTextColor(...coral);
+    doc.text('VELORIX', 14, 18);
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
+    doc.text('LOGISTICS SERVICES', 14, 23);
+
+    // Contact block right
+    doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(0,0,0);
+    doc.text('Contact US', W - 14, 10, { align: 'right' });
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,60,60);
+    doc.text('Address: Bucharest, Romania', W - 14, 15, { align: 'right' });
+    doc.text('Email: support@velorixlogistics.com', W - 14, 19.5, { align: 'right' });
+    doc.text('Phone: +1 800 VELORIX  |  +40', W - 14, 24, { align: 'right' });
+
+    // ── "Shipment Receipt" red banner ──
+    doc.setFillColor(...coral);
+    doc.rect(0, 30, W, 14, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(17); doc.setFont('helvetica','bold');
+    doc.text('Shipment Receipt', 14, 40);
+
+    // ── Tracking strip ──
+    doc.setFillColor(230,230,230);
+    doc.rect(0, 44, W, 10, 'F');
+    doc.setTextColor(0,0,0); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text('Tracking ID: ' + (s.tracking_number || '—'), 14, 51);
+    doc.text('Date of shipment: ' + (s.shipment_date || '—'), W - 14, 51, { align: 'right' });
+
+    // ── Sender / Receiver two-column ──
+    let y = 62;
+    const lx = 14, rx = W / 2 + 4;
+
+    // Sender label
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...coral);
+    doc.text('Sender:', lx, y);
+    doc.setTextColor(0,0,0); doc.setFont('helvetica','bold');
+    doc.text(s.sender_name || '—', lx + 18, y); y += 6;
+    doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60); doc.setFontSize(8.5);
+    doc.text('Address: ' + (s.sender_address || '—'), lx, y); y += 6;
+    doc.text('Origin: ' + (s.origin || '—'), lx, y); y += 6;
+    doc.setTextColor(...coral);
+    doc.text('Amount: ' + (s.shipment_amount ? s.shipment_amount + ' USD' : '—'), lx, y);
+
+    // Receiver label (right column, same top y = 62)
+    let ry = 62;
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60);
+    doc.text('Receiver:', rx, ry);
+    doc.setTextColor(0,0,0); doc.setFont('helvetica','bold');
+    doc.text(s.receiver_name || '—', rx + 22, ry); ry += 6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(60,60,60);
+    doc.text(s.receiver_address || '—', rx, ry); ry += 6;
+    doc.text(s.receiver_email || '—', rx, ry); ry += 6;
+    doc.text(s.receiver_phone || '—', rx, ry); ry += 6;
+    doc.setFont('helvetica','bold'); doc.setTextColor(0,0,0);
+    doc.text('Destination:', rx, ry); ry += 5;
+    doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60);
+    doc.text(s.destination || '—', rx, ry);
+
+    y = Math.max(y, ry) + 12;
+
+    // ── Parcel / Delivery two bars ──
+    doc.setFillColor(...coral);
+    doc.rect(14, y, 88, 8, 'F');
+    doc.setFillColor(...teal);
+    doc.rect(108, y, 88, 8, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    doc.text('PARCEL DESCRIPTION', 58, y + 5.5, { align: 'center' });
+    doc.text('EXPECTED DATE OF DELIVERY: ' + (s.estimated_delivery || '—'), 152, y + 5.5, { align: 'center' });
+    y += 13;
+
+    // Parcel details
+    doc.setTextColor(0,0,0); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text(s.description || 'N/A', 14, y); y += 6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text('Weight: ' + (s.weight_kg ? s.weight_kg + ' KG' : '—'), 14, y);
+    doc.text('Package Type: ' + (s.package_type || '—'), 80, y); y += 6;
+    if (s.shipment_comments) {
+        doc.setFont('helvetica','italic'); doc.setTextColor(80,80,80);
+        doc.text('Comments: ' + s.shipment_comments, 14, y); y += 6;
+        doc.setFont('helvetica','normal');
+    }
+    y += 6;
+
+    // ── Terms ──
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(50,50,50);
+    const terms = 'Any shortage or damage must be notified within 72 hours of receipt of goods. Complaints can only be accepted if made in writing within 30 days of receipt of goods. No goods may be returned without prior authorization from Velorix Logistics Services.';
+    y = _pdfWrapText(doc, terms, 14, y, W - 28, 5);
+    y += 6;
+
+    // ── Payment logos (text) + signature ──
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(0,0,80);
+    doc.text('PayPal', 14, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
+    doc.text('VISA  |  Mastercard  |  Credit & Debit Cards Accepted', 30, y); y += 10;
+
+    // Signature line
+    doc.setDrawColor(0,0,0); doc.setLineWidth(0.4);
+    doc.line(14, y, 70, y); y += 4;
+    doc.setFontSize(7.5); doc.setTextColor(100,100,100);
+    doc.text('Signed', 14, y);
+
+    // ── DISPATCHED stamp — rotated, bottom right ──
+    doc.saveGraphicsState();
+    doc.setGState(new doc.GState({ opacity: 0.75 }));
+    doc.setFontSize(26); doc.setFont('helvetica','bold');
+    doc.setTextColor(...stampColor);
+    doc.text(stampLabel, W - 30, H - 38, { align: 'center', angle: -30 });
+    doc.setDrawColor(...stampColor); doc.setLineWidth(2);
+    // Oval border around stamp
+    doc.ellipse(W - 38, H - 46, 30, 14);
+    doc.restoreGraphicsState();
+
+    doc.save(s.tracking_number + '_Receipt.pdf');
 }
 
 // --- Delete shipment ---
