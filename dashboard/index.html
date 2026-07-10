@@ -43,15 +43,6 @@
         .badge-status-delivered { background:#198754; }
         .badge-status-delayed { background:#dc3545; }
         .badge-status-cancelled { background:#343a40; }
-        #auth-guard-overlay {
-            position: fixed; inset: 0; background: #f5f6fa;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 9999; font-size: 18px; color: #333;
-        }
-        #auth-guard-overlay .auth-logout-btn {
-            margin-top: 18px; font-size: 13px; padding: 7px 22px;
-            background: #dc3545; color: #fff; border: none; border-radius: 5px; cursor: pointer;
-        }
 
         /* --- Mobile responsiveness --- */
         #mobile-menu-btn { display: none; }
@@ -108,12 +99,7 @@
 </head>
 <body>
 
-<div id="auth-guard-overlay">
-    <span>Checking session...</span>
-    <button class="auth-logout-btn" onclick="sb.auth.signOut().then(function(){window.location.href='../login.html';})">Logout &amp; Go to Login</button>
-</div>
-
-<div class="d-flex" id="app-shell" style="display:none !important;">
+<div class="d-flex" id="app-shell">
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
     <!-- Sidebar -->
@@ -137,7 +123,11 @@
                 </button>
                 <h5 class="mb-0">Admin Dashboard</h5>
             </div>
-            <span id="admin-email-label" class="text-muted"></span>
+            <div class="d-flex align-items-center gap-3">
+                <span id="admin-email-label" class="text-muted d-none d-md-inline"></span>
+                <a href="../index.html" class="btn btn-sm btn-outline-secondary">Home</a>
+                <button id="logout-btn-top" class="btn btn-sm btn-danger">Logout</button>
+            </div>
         </div>
 
         <div class="p-4">
@@ -588,36 +578,24 @@ async function sendShipmentEmail(payload) {
 
 let currentShipments = [];
 
-// --- Auth guard: redirect to login if no active session ---
-async function checkAuth() {
-    try {
-        const { data: { session } } = await sb.auth.getSession();
-        if (!session) {
-            window.location.href = '../login.html';
-            return;
-        }
-        document.getElementById('admin-email-label').textContent = session.user.email;
-        document.getElementById('auth-guard-overlay').style.display = 'none';
-        document.getElementById('app-shell').style.setProperty('display', 'flex', 'important');
-        loadShipments();
-    } catch(err) {
-        document.querySelector('#auth-guard-overlay span').textContent = 'Session error. Please logout and login again.';
-    }
-}
-checkAuth();
-
-// Re-check on auth state change (token expiry / sign-out)
-sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT') {
-        window.location.href = '../login.html';
-    }
+// --- Auth guard: silently redirect to login if no session ---
+sb.auth.getSession().then(function({ data: { session } }) {
+    if (!session) { window.location.href = '../login.html'; return; }
+    document.getElementById('admin-email-label').textContent = session.user.email;
+    loadShipments();
 });
 
-document.getElementById('logout-link').addEventListener('click', async function(e) {
-    e.preventDefault();
+sb.auth.onAuthStateChange(function(event) {
+    if (event === 'SIGNED_OUT') window.location.href = '../login.html';
+});
+
+async function doLogout() {
     await sb.auth.signOut();
-    window.location.href = '../login.html';
-});
+    window.location.href = '../index.html';
+}
+
+document.getElementById('logout-btn-top').addEventListener('click', doLogout);
+document.getElementById('logout-link').addEventListener('click', function(e) { e.preventDefault(); doLogout(); });
 
 // --- Mobile sidebar toggle ---
 const sidebarEl = document.getElementById('sidebar');
