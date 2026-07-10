@@ -824,9 +824,11 @@ document.getElementById('edit-shipment-form').addEventListener('submit', async f
         return;
     }
 
-    // Log tracking history entry — status text drives the banner, progress drives the bar
-    if (historyStatusText || historyNote) {
-        await sb.from('tracking_history').insert([{
+    // Log tracking history entry — status text drives the banner, progress drives the bar.
+    // Insert whenever ANY of the optional history fields were filled in (not just status text/note).
+    let historyError = null;
+    if (historyStatusText || historyNote || historyProgress || historyDate) {
+        const result = await sb.from('tracking_history').insert([{
             shipment_id: id,
             status: historyStatusText || payload.status,
             location: historyDate || null,
@@ -835,12 +837,17 @@ document.getElementById('edit-shipment-form').addEventListener('submit', async f
             note: historyNote || null,
             progress_percent: historyProgress ? parseInt(historyProgress, 10) : null
         }]);
+        historyError = result.error;
     }
 
     btn.disabled = false;
     btn.textContent = 'Save Changes';
     closeEditModal();
-    swal('Updated', 'Shipment saved.', 'success');
+    if (historyError) {
+        swal('Shipment Saved, History Failed', 'Shipment details were saved, but the location history entry could not be added: ' + historyError.message, 'warning');
+    } else {
+        swal('Updated', 'Shipment saved.', 'success');
+    }
     loadShipments();
 });
 
