@@ -1787,6 +1787,22 @@ function googleTranslateElementInit() {
     <script src="logistip/assets/js/odometer.js"></script>
 
     <script src="logistip/assets/js/script.js"></script>
+
+    <script>
+    // Move scroll-to-top button above the Chatway chat bubble
+    (function nudgeScrollBtn() {
+        var attempts = 0;
+        var interval = setInterval(function() {
+            var btn = document.querySelector('.progressScroll');
+            if (btn) {
+                btn.style.bottom = '90px';
+                btn.style.right = '20px';
+                clearInterval(interval);
+            }
+            if (++attempts > 40) clearInterval(interval);
+        }, 150);
+    })();
+    </script>
     
 
 
