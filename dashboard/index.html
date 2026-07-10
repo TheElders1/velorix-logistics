@@ -938,8 +938,137 @@ function _pdfTimeline(doc, steps, currentStatus, x, y, totalW) {
     });
 }
 
+// --- Logo loader (shared across all PDF templates) ---
+let _pdfLogoDataUrl = null, _pdfLogoPromise = null;
+function _pdfGetLogo() {
+    if (_pdfLogoDataUrl !== null) return Promise.resolve(_pdfLogoDataUrl);
+    if (_pdfLogoPromise) return _pdfLogoPromise;
+    _pdfLogoPromise = fetch('logo.png').then(function(r){ return r.blob(); }).then(function(blob) {
+        return new Promise(function(resolve) {
+            const reader = new FileReader();
+            reader.onloadend = function(){ _pdfLogoDataUrl = reader.result; resolve(_pdfLogoDataUrl); };
+            reader.onerror = function(){ _pdfLogoDataUrl = false; resolve(false); };
+            reader.readAsDataURL(blob);
+        });
+    }).catch(function(){ _pdfLogoDataUrl = false; return false; });
+    return _pdfLogoPromise;
+}
+// Draws the logo image (208x140 aspect) at a given height; optional white backdrop for dark headers.
+function _pdfDrawLogo(doc, logoData, x, y, h, withBg) {
+    const w = h * 208/140;
+    if (!logoData) return w;
+    if (withBg) {
+        doc.setFillColor(255,255,255);
+        doc.roundedRect(x-2, y-2, w+4, h+4, 1.5, 1.5, 'F');
+    }
+    try { doc.addImage(logoData, 'PNG', x, y, w, h); } catch(err) { console.warn('Logo draw failed:', err); }
+    return w;
+}
+
+// Generic label/value card with a colored header bar, optional bold name line, full text wrapping,
+// and dynamic height (measures content first, then draws background/border to fit exactly).
+function _pdfInfoPanel(doc, o) {
+    const lpad = o.lpad != null ? o.lpad : 5;
+    const innerW = o.w - lpad*2;
+    const headerH = o.headerH != null ? o.headerH : 9;
+    const nameLine = o.nameLine || 5.2, valueLine = o.valueLine || 4.2;
+    const fieldGap = o.fieldGap != null ? o.fieldGap : 4, fieldPad = o.fieldPad != null ? o.fieldPad : 2;
+    const radius = o.radius != null ? o.radius : 3;
+
+    let nameLines = [];
+    if (o.nameVal !== undefined) {
+        doc.setFontSize(o.fontName || 9.5); doc.setFont('helvetica','bold');
+        nameLines = doc.splitTextToSize(o.nameVal || '—', innerW);
+    }
+    doc.setFontSize(o.fontValue || 8);
+    const fieldLines = o.fields.map(function(f) { return doc.splitTextToSize(String(f.value||'—'), innerW); });
+
+    let iy = o.y + headerH + 6;
+    if (o.nameVal !== undefined) iy += nameLines.length * nameLine + 3;
+    fieldLines.forEach(function(lines) { iy += fieldGap + lines.length * valueLine + fieldPad; });
+    iy += (o.bottomPad != null ? o.bottomPad : 4);
+    const h = iy - o.y;
+
+    if (o.shadow) {
+        doc.setFillColor(o.shadowColor[0], o.shadowColor[1], o.shadowColor[2]);
+        doc.roundedRect(o.x+1.2, o.y+1.2, o.w, h, radius, radius, 'F');
+    }
+    doc.setFillColor(o.cardBg[0], o.cardBg[1], o.cardBg[2]);
+    doc.roundedRect(o.x, o.y, o.w, h, radius, radius, 'F');
+    doc.setFillColor(o.headerColor[0], o.headerColor[1], o.headerColor[2]);
+    doc.roundedRect(o.x, o.y, o.w, headerH, radius, radius, 'F');
+    doc.rect(o.x, o.y+headerH/2, o.w, headerH/2, 'F');
+    doc.setFontSize(o.fontHeader || 8); doc.setFont('helvetica','bold');
+    const htc = o.headerTextColor || [255,255,255];
+    doc.setTextColor(htc[0], htc[1], htc[2]);
+    if (o.headerAlign === 'center') doc.text(o.header, o.x+o.w/2, o.y+headerH*0.65, {align:'center'});
+    else doc.text(o.header, o.x+lpad, o.y+headerH*0.65);
+
+    let cy = o.y + headerH + 6;
+    if (o.nameVal !== undefined) {
+        doc.setFontSize(o.fontName || 9.5); doc.setFont('helvetica','bold');
+        const nc = o.nameColor || o.valueColor;
+        doc.setTextColor(nc[0], nc[1], nc[2]);
+        doc.text(nameLines, o.x+lpad, cy);
+        cy += nameLines.length * nameLine;
+        doc.setDrawColor(o.divColor[0], o.divColor[1], o.divColor[2]); doc.setLineWidth(0.3);
+        doc.line(o.x+lpad, cy, o.x+o.w-lpad, cy);
+        cy += 3;
+    }
+    o.fields.forEach(function(f, idx) {
+        doc.setFontSize(o.fontLabel || 6.5); doc.setFont('helvetica','normal');
+        doc.setTextColor(o.labelColor[0], o.labelColor[1], o.labelColor[2]);
+        doc.text(f.label, o.x+lpad, cy);
+        cy += fieldGap;
+        doc.setFontSize(o.fontValue || 8); doc.setFont('helvetica','normal');
+        doc.setTextColor(o.valueColor[0], o.valueColor[1], o.valueColor[2]);
+        doc.text(fieldLines[idx], o.x+lpad, cy);
+        cy += fieldLines[idx].length * valueLine + fieldPad;
+    });
+
+    if (o.border) {
+        doc.setDrawColor(o.borderColor[0], o.borderColor[1], o.borderColor[2]);
+        doc.setLineWidth(o.borderW || 0.4);
+        doc.roundedRect(o.x, o.y, o.w, h, radius, radius, 'S');
+    }
+    return o.y + h;
+}
+
+// Two-column label/value grid (e.g. Shipment Details) with per-row text wrapping and dynamic row height.
+function _pdfDetailGrid(doc, x, y, w, rows, o) {
+    const half = w/2, lpad = o.lpad != null ? o.lpad : 6, colW = half - lpad - 4;
+    doc.setFontSize(o.fontValue || 8);
+    const measured = rows.map(function(r) {
+        const l1 = doc.splitTextToSize(String(r[1]||'—'), colW);
+        const l2 = doc.splitTextToSize(String(r[3]||'—'), colW);
+        return { r:r, l1:l1, l2:l2, rowH: Math.max(l1.length,l2.length) * 4.2 + (o.rowPad || 7) };
+    });
+    let cy = y;
+    measured.forEach(function(item) {
+        doc.setFontSize(o.fontLabel || 6.5); doc.setFont('helvetica','normal');
+        doc.setTextColor(o.labelColor[0], o.labelColor[1], o.labelColor[2]);
+        doc.text(item.r[0], x+lpad, cy); doc.text(item.r[2], x+half+2, cy);
+        doc.setFontSize(o.fontValue || 8); doc.setFont('helvetica','normal');
+        doc.setTextColor(o.valueColor[0], o.valueColor[1], o.valueColor[2]);
+        doc.text(item.l1, x+lpad, cy+4.2); doc.text(item.l2, x+half+2, cy+4.2);
+        cy += item.rowH;
+    });
+    return cy;
+}
+function _pdfDetailGridHeight(doc, w, rows, o) {
+    const half = w/2, lpad = o.lpad != null ? o.lpad : 6, colW = half - lpad - 4;
+    doc.setFontSize(o.fontValue || 8);
+    let total = 0;
+    rows.forEach(function(r) {
+        const l1 = doc.splitTextToSize(String(r[1]||'—'), colW);
+        const l2 = doc.splitTextToSize(String(r[3]||'—'), colW);
+        total += Math.max(l1.length,l2.length) * 4.2 + (o.rowPad || 7);
+    });
+    return total;
+}
+
 // --- PDF 1: Minimal White (Apple / Stripe / Notion aesthetic) ---
-function generatePdfClassic(id) {
+async function generatePdfClassic(id) {
     const s = currentShipments.find(sh => sh.id === id);
     if (!s) return;
     const { jsPDF } = window.jspdf;
@@ -953,16 +1082,22 @@ function generatePdfClassic(id) {
     const bluBg  = [239,246,255];
     const div    = [229,231,235];
     const cardBg = [249,250,251];
+    const shadow = [214,225,240];
     const sc = _pdfStampColor(s.status), sl = _pdfStampLabel(s.status);
+    const logoData = await _pdfGetLogo();
 
     // White page
     doc.setFillColor(255,255,255); doc.rect(0,0,W,H,'F');
+    // Thin brand accent along the very top edge
+    doc.setFillColor(...blue); doc.rect(0,0,W,2.2,'F');
 
     // ── Header ──
-    doc.setFontSize(22); doc.setFont('helvetica','bold'); doc.setTextColor(...blue);
-    doc.text('VELORIX', 14, 18);
+    const logoW = _pdfDrawLogo(doc, logoData, 14, 8, 11, false);
+    const nameX = logoData ? 14+logoW+4 : 14;
+    doc.setFontSize(18); doc.setFont('helvetica','bold'); doc.setTextColor(...blue);
+    doc.text('VELORIX', nameX, 16);
     doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...muted);
-    doc.text('LOGISTICS SERVICES', 14, 23);
+    doc.text('LOGISTICS SERVICES', nameX, 20.5);
 
     doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...ink);
     doc.text('Contact Information', W-14, 11, {align:'right'});
@@ -996,59 +1131,52 @@ function generatePdfClassic(id) {
 
     let y = 81;
 
-    // ── Sender & Receiver cards ──
+    // ── Sender & Receiver cards (dynamic height, full text wrapping) ──
     const cW2 = (W-28-5)/2;
-    const sX=14, rX=14+cW2+5, cardH=62;
+    const sX=14, rX=14+cW2+5;
+    const panelBase = {
+        shadow:true, shadowColor:shadow, divColor:div,
+        labelColor:muted, valueColor:body, cardBg:cardBg
+    };
+    const sBottom = _pdfInfoPanel(doc, Object.assign({}, panelBase, {
+        x:sX, y:y, w:cW2, header:'SENDER', headerColor:blue,
+        fields:[
+            {label:'Name', value:s.sender_name},
+            {label:'Address', value:s.sender_address},
+            {label:'Email', value:s.sender_email},
+            {label:'Phone', value:s.sender_phone},
+            {label:'Origin', value:s.origin}
+        ]
+    }));
+    const rBottom = _pdfInfoPanel(doc, Object.assign({}, panelBase, {
+        x:rX, y:y, w:cW2, header:'RECEIVER', headerColor:ink,
+        fields:[
+            {label:'Name', value:s.receiver_name},
+            {label:'Address', value:s.receiver_address},
+            {label:'Email', value:s.receiver_email},
+            {label:'Phone', value:s.receiver_phone},
+            {label:'Destination', value:s.destination}
+        ]
+    }));
+    y = Math.max(sBottom, rBottom) + 8;
 
-    // Sender
-    _pdfShadowCard(doc, sX, y, cW2, cardH, 3);
-    doc.setFillColor(...blue); doc.roundedRect(sX, y, cW2, 9, 3,3,'F');
-    doc.rect(sX, y+5, cW2, 4,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
-    doc.text('SENDER', sX+5, y+6.5);
-    let sy = y+16;
-    [['Name',s.sender_name],['Address',s.sender_address],['Email',s.sender_email],['Phone',s.sender_phone],['Origin',s.origin]].forEach(function([l,v]) {
-        doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...muted); doc.text(l, sX+5, sy);
-        doc.setFontSize(8); doc.setTextColor(...body); doc.text(v||'—', sX+5, sy+4.5); sy+=10;
-    });
-
-    // Receiver
-    _pdfShadowCard(doc, rX, y, cW2, cardH, 3);
-    doc.setFillColor(...ink); doc.roundedRect(rX, y, cW2, 9, 3,3,'F');
-    doc.rect(rX, y+5, cW2, 4,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
-    doc.text('RECEIVER', rX+5, y+6.5);
-    let ry = y+16;
-    [['Name',s.receiver_name],['Address',s.receiver_address],['Email',s.receiver_email],['Phone',s.receiver_phone],['Destination',s.destination]].forEach(function([l,v]) {
-        doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...muted); doc.text(l, rX+5, ry);
-        doc.setFontSize(8); doc.setTextColor(...body); doc.text(v||'—', rX+5, ry+4.5); ry+=10;
-    });
-
-    y += cardH + 8;
-
-    // ── Shipment Details grid ──
-    doc.setFillColor(...cardBg); doc.roundedRect(14, y, W-28, 50, 3,3,'F');
-    doc.setDrawColor(...div); doc.setLineWidth(0.3); doc.roundedRect(14, y, W-28, 50, 3,3,'S');
-    doc.setFontSize(9.5); doc.setFont('helvetica','bold'); doc.setTextColor(...ink); doc.text('Shipment Details', 20, y+8);
-    doc.setDrawColor(...div); doc.line(14, y+11, W-14, y+11);
-    // Vertical mid-divider
-    doc.line(W/2+2, y+11, W/2+2, y+50);
+    // ── Shipment Details grid (dynamic height, wrapped values) ──
     const dItems = [
         ['Description', s.description||'—',       'Weight',       s.weight_kg?s.weight_kg+' kg':'—'],
         ['Package Type', s.package_type||'—',      'Dimensions',   '—'],
         ['Shipping Method', 'Express Logistics',   'Declared Value', s.shipment_amount?'$'+s.shipment_amount:'—'],
         ['Insurance', '—',                         'Reference No.', s.tracking_number||'—'],
     ];
-    let dy = y+19;
-    dItems.forEach(function([l1,v1,l2,v2]) {
-        doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...muted);
-        doc.text(l1, 20, dy); doc.text(l2, W/2+6, dy);
-        doc.setFontSize(8); doc.setTextColor(...body);
-        doc.text(v1, 20, dy+4.5); doc.text(v2, W/2+6, dy+4.5);
-        dy += 10.5;
-    });
+    const gridOpts = { labelColor:muted, valueColor:body };
+    const gridH = _pdfDetailGridHeight(doc, W-28, dItems, gridOpts);
+    const boxH = 15 + gridH;
+    doc.setFillColor(...cardBg); doc.roundedRect(14, y, W-28, boxH, 3,3,'F');
+    doc.setDrawColor(...div); doc.setLineWidth(0.3); doc.roundedRect(14, y, W-28, boxH, 3,3,'S');
+    doc.setFontSize(9.5); doc.setFont('helvetica','bold'); doc.setTextColor(...ink); doc.text('Shipment Details', 20, y+8);
+    doc.setDrawColor(...div); doc.line(14, y+11, W-14, y+11);
+    _pdfDetailGrid(doc, 14, y+19, W-28, dItems, gridOpts);
 
-    y += 56;
+    y += boxH + 6;
 
     // ── Delivery Timeline ──
     doc.setFillColor(...cardBg); doc.roundedRect(14, y, W-28, 28, 3,3,'F');
@@ -1079,7 +1207,7 @@ function generatePdfClassic(id) {
 }
 
 // --- PDF 2: Corporate (Stripe Dashboard / SaaS aesthetic) ---
-function generatePdfModern(id) {
+async function generatePdfModern(id) {
     const s = currentShipments.find(sh => sh.id === id);
     if (!s) return;
     const { jsPDF } = window.jspdf;
@@ -1096,6 +1224,7 @@ function generatePdfModern(id) {
     const green = [22,163,74];
     const div = [226,232,240];
     const sc = _pdfStampColor(s.status), sl = _pdfStampLabel(s.status);
+    const logoData = await _pdfGetLogo();
 
     // Light gray page background
     doc.setFillColor(...pageGray); doc.rect(0,0,W,H,'F');
@@ -1107,12 +1236,14 @@ function generatePdfModern(id) {
     }
 
     // Logo
-    doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
-    doc.text('VELORIX', 14, 18);
-    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(196,213,255);
-    doc.text('LOGISTICS SERVICES', 14, 24);
-    doc.text('support@velorixlogistics.com  |  www.velorixlogistics.com', 14, 29);
-    doc.text('+1 800 VELORIX  |  +40', 14, 34);
+    const logoW = _pdfDrawLogo(doc, logoData, 14, 8, 11, true);
+    const nameX = logoData ? 14+logoW+7 : 14;
+    doc.setFontSize(17); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+    doc.text('VELORIX', nameX, 16);
+    doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(196,213,255);
+    doc.text('LOGISTICS SERVICES', nameX, 20.5);
+    doc.text('support@velorixlogistics.com  |  www.velorixlogistics.com', 14, 30);
+    doc.text('+1 800 VELORIX  |  +40', 14, 35);
 
     // Status badge (right header)
     const sl_colors = {DELIVERED:[22,163,74], 'IN TRANSIT':[37,99,235], DISPATCHED:[249,115,22], PROCESSING:[100,116,139]};
@@ -1146,58 +1277,48 @@ function generatePdfModern(id) {
 
     y += 30;
 
-    // ── Sender + Receiver cards ──
+    // ── Sender + Receiver cards (dynamic height, full text wrapping) ──
     const cW2 = (W-28-5)/2;
-    const sX=14, rX=14+cW2+5, srH=68;
+    const sX=14, rX=14+cW2+5;
+    const panelBase = { shadow:true, shadowColor:div, divColor:div, labelColor:muted, valueColor:body, cardBg:white, radius:4, headerH:10 };
+    const sBottom = _pdfInfoPanel(doc, Object.assign({}, panelBase, {
+        x:sX, y:y, w:cW2, header:'SENDER', headerColor:blue,
+        fields:[
+            {label:'Name', value:s.sender_name},
+            {label:'Address', value:s.sender_address},
+            {label:'Email', value:s.sender_email},
+            {label:'Phone', value:s.sender_phone},
+            {label:'Origin', value:s.origin}
+        ]
+    }));
+    const rBottom = _pdfInfoPanel(doc, Object.assign({}, panelBase, {
+        x:rX, y:y, w:cW2, header:'RECEIVER', headerColor:orange,
+        fields:[
+            {label:'Name', value:s.receiver_name},
+            {label:'Address', value:s.receiver_address},
+            {label:'Email', value:s.receiver_email},
+            {label:'Phone', value:s.receiver_phone},
+            {label:'Destination', value:s.destination}
+        ]
+    }));
+    y = Math.max(sBottom, rBottom) + 7;
 
-    // Sender
-    doc.setFillColor(...div); doc.roundedRect(sX+1.2, y+1.2, cW2, srH, 4,4,'F');
-    doc.setFillColor(...white); doc.roundedRect(sX, y, cW2, srH, 4,4,'F');
-    doc.setFillColor(...blue); doc.roundedRect(sX, y, cW2, 10, 4,4,'F'); doc.rect(sX, y+5, cW2, 5,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
-    doc.text('SENDER', sX+5, y+7.5);
-    let sy=y+18;
-    [['Name',s.sender_name],['Address',s.sender_address],['Email',s.sender_email],['Phone',s.sender_phone],['Origin',s.origin]].forEach(function([l,v]) {
-        doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...muted); doc.text(l, sX+5, sy);
-        doc.setFontSize(8); doc.setTextColor(...body); doc.text(v||'—', sX+5, sy+4.5); sy+=10;
-    });
-
-    // Receiver
-    doc.setFillColor(...div); doc.roundedRect(rX+1.2, y+1.2, cW2, srH, 4,4,'F');
-    doc.setFillColor(...white); doc.roundedRect(rX, y, cW2, srH, 4,4,'F');
-    doc.setFillColor(...orange); doc.roundedRect(rX, y, cW2, 10, 4,4,'F'); doc.rect(rX, y+5, cW2, 5,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
-    doc.text('RECEIVER', rX+5, y+7.5);
-    let ry=y+18;
-    [['Name',s.receiver_name],['Address',s.receiver_address],['Email',s.receiver_email],['Phone',s.receiver_phone],['Destination',s.destination]].forEach(function([l,v]) {
-        doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...muted); doc.text(l, rX+5, ry);
-        doc.setFontSize(8); doc.setTextColor(...body); doc.text(v||'—', rX+5, ry+4.5); ry+=10;
-    });
-
-    y += srH + 7;
-
-    // ── Shipment Details card ──
-    const sdH=50;
-    doc.setFillColor(...div); doc.roundedRect(15, y+1.2, W-28, sdH, 4,4,'F');
-    doc.setFillColor(...white); doc.roundedRect(14, y, W-28, sdH, 4,4,'F');
-    doc.setFillColor(...green); doc.roundedRect(14, y, W-28, 10, 4,4,'F'); doc.rect(14, y+5, W-28, 5,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
-    doc.text('SHIPMENT DETAILS', 20, y+7.5);
-    doc.setDrawColor(...div); doc.setLineWidth(0.3); doc.line(W/2+2, y+10, W/2+2, y+sdH);
+    // ── Shipment Details card (dynamic height, wrapped values) ──
     const sdItems=[
         ['Description',s.description||'—','Weight',s.weight_kg?s.weight_kg+' kg':'—'],
         ['Package Type',s.package_type||'—','Dimensions','—'],
         ['Shipping Method','Express Logistics','Declared Value',s.shipment_amount?'$'+s.shipment_amount:'—'],
         ['Insurance','—','Reference No.',s.tracking_number||'—'],
     ];
-    let ddy=y+18;
-    sdItems.forEach(function([l1,v1,l2,v2]) {
-        doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...muted);
-        doc.text(l1, 20, ddy); doc.text(l2, W/2+6, ddy);
-        doc.setFontSize(8); doc.setTextColor(...body);
-        doc.text(v1, 20, ddy+4.5); doc.text(v2, W/2+6, ddy+4.5);
-        ddy+=10;
-    });
+    const sdGridOpts = { labelColor:muted, valueColor:body };
+    const sdGridH = _pdfDetailGridHeight(doc, W-28, sdItems, sdGridOpts);
+    const sdH = 17 + sdGridH;
+    doc.setFillColor(...div); doc.roundedRect(15, y+1.2, W-28, sdH, 4,4,'F');
+    doc.setFillColor(...white); doc.roundedRect(14, y, W-28, sdH, 4,4,'F');
+    doc.setFillColor(...green); doc.roundedRect(14, y, W-28, 10, 4,4,'F'); doc.rect(14, y+5, W-28, 5,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    doc.text('SHIPMENT DETAILS', 20, y+7.5);
+    _pdfDetailGrid(doc, 14, y+18, W-28, sdItems, sdGridOpts);
 
     y += sdH + 7;
 
@@ -1229,7 +1350,7 @@ function generatePdfModern(id) {
 }
 
 // --- PDF 3: Luxury Black (executive / high-value cargo) ---
-function generatePdfMinimal(id) {
+async function generatePdfMinimal(id) {
     const s = currentShipments.find(sh => sh.id === id);
     if (!s) return;
     const { jsPDF } = window.jspdf;
@@ -1243,6 +1364,7 @@ function generatePdfMinimal(id) {
     const white  = [248,250,252];
     const grayTx = [148,163,184];
     const sc = _pdfStampColor(s.status), sl = _pdfStampLabel(s.status);
+    const logoData = await _pdfGetLogo();
 
     // Full black page
     doc.setFillColor(...pageBg); doc.rect(0,0,W,H,'F');
@@ -1260,10 +1382,12 @@ function generatePdfMinimal(id) {
 
     // ── Header ──
     doc.setDrawColor(...gold); doc.setLineWidth(0.6); doc.line(14,14,W-14,14);
-    doc.setFontSize(24); doc.setFont('helvetica','bold'); doc.setTextColor(...gold);
-    doc.text('VELORIX', 14, 24);
+    const logoW = _pdfDrawLogo(doc, logoData, 14, 16, 10, true);
+    const nameX = logoData ? 14+logoW+6 : 14;
+    doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(...gold);
+    doc.text('VELORIX', nameX, 24);
     doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...grayTx);
-    doc.text('LOGISTICS SERVICES  |  www.velorixlogistics.com  |  support@velorixlogistics.com', 14, 30);
+    doc.text('LOGISTICS SERVICES  |  www.velorixlogistics.com  |  support@velorixlogistics.com', nameX, 30);
     doc.text('+1 800 VELORIX  |  +40  |  +33  |  Bucharest, Romania', W-14, 24, {align:'right'});
     doc.setDrawColor(...gold); doc.line(14,34,W-14,34);
 
@@ -1297,49 +1421,40 @@ function generatePdfMinimal(id) {
 
     let y = ftY + ftH + 8;
 
-    // ── Three info panels ──
-    const panW=(W-28-2*5)/3, panH=60;
+    // ── Three info panels (dynamic height, full text wrapping) ──
+    const panW=(W-28-2*5)/3;
     const panels=[
-        {title:'SENDER',   color:eBlue,  fields:[['Name',s.sender_name],['Address',s.sender_address],['Email',s.sender_email],['Phone',s.sender_phone]]},
-        {title:'RECEIVER', color:gold,   fields:[['Name',s.receiver_name],['Address',s.receiver_address],['Email',s.receiver_email],['Phone',s.receiver_phone]]},
-        {title:'SHIPMENT', color:[212,100,55], fields:[['Origin',s.origin],['Destination',s.destination],['Package Type',s.package_type],['Weight',s.weight_kg?s.weight_kg+' kg':'—']]},
+        {title:'SENDER',   color:eBlue,  fields:[{label:'Name',value:s.sender_name},{label:'Address',value:s.sender_address},{label:'Email',value:s.sender_email},{label:'Phone',value:s.sender_phone}]},
+        {title:'RECEIVER', color:gold,   fields:[{label:'Name',value:s.receiver_name},{label:'Address',value:s.receiver_address},{label:'Email',value:s.receiver_email},{label:'Phone',value:s.receiver_phone}]},
+        {title:'SHIPMENT', color:[212,100,55], fields:[{label:'Origin',value:s.origin},{label:'Destination',value:s.destination},{label:'Package Type',value:s.package_type},{label:'Weight',value:s.weight_kg?s.weight_kg+' kg':'—'}]},
     ];
-    panels.forEach(function(p,i) {
+    const panBottoms = panels.map(function(p,i) {
         const px=14+i*(panW+5);
-        doc.setFillColor(...cardBg); doc.roundedRect(px,y,panW,panH,3,3,'F');
-        doc.setDrawColor(...p.color); doc.setLineWidth(0.4); doc.roundedRect(px,y,panW,panH,3,3,'S');
-        doc.setFillColor(...p.color); doc.roundedRect(px,y,panW,9,3,3,'F'); doc.rect(px,y+5,panW,4,'F');
-        doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(...pageBg);
-        doc.text(p.title, px+panW/2, y+6.5, {align:'center'});
-        let py=y+15;
-        p.fields.forEach(function([l,v]) {
-            doc.setFontSize(6); doc.setFont('helvetica','normal'); doc.setTextColor(...grayTx); doc.text(l,px+4,py);
-            doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...white); doc.text(v||'—',px+4,py+4.5); py+=12;
+        return _pdfInfoPanel(doc, {
+            x:px, y:y, w:panW, header:p.title, headerColor:p.color, headerTextColor:pageBg,
+            headerAlign:'center', border:true, borderColor:p.color, borderW:0.4,
+            cardBg:cardBg, labelColor:grayTx, valueColor:white, divColor:grayTx,
+            fields:p.fields, fontLabel:6, fontValue:7.5, fieldGap:4, valueLine:4, fieldPad:2.5, bottomPad:4, headerH:9
         });
     });
+    y = Math.max.apply(null, panBottoms) + 8;
 
-    y += panH + 8;
-
-    // ── Specifications table ──
-    doc.setFillColor(...cardBg); doc.roundedRect(14,y,W-28,42,3,3,'F');
-    doc.setDrawColor(...gold); doc.setLineWidth(0.4); doc.roundedRect(14,y,W-28,42,3,3,'S');
-    doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(...gold); doc.text('SHIPMENT SPECIFICATIONS',20,y+8);
-    doc.setDrawColor(...gold); doc.setLineWidth(0.2); doc.line(14,y+11,W-14,y+11);
-    doc.line(W/2+2,y+11,W/2+2,y+42);
+    // ── Specifications table (dynamic height, wrapped values) ──
     const specRows=[
         ['Weight',s.weight_kg?s.weight_kg+' kg':'—','Package Type',s.package_type||'—'],
         ['Description',s.description||'—','Route',(s.origin||'—')+' → '+(s.destination||'—')],
         ['Carrier','Velorix Logistics Services','Shipping Method','Express Logistics'],
     ];
-    let sy=y+18;
-    specRows.forEach(function([l1,v1,l2,v2]) {
-        doc.setFontSize(6); doc.setFont('helvetica','normal'); doc.setTextColor(...grayTx);
-        doc.text(l1+':', 20, sy); doc.text(l2+':', W/2+6, sy);
-        doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...white);
-        doc.text(v1, 40, sy); doc.text(v2, W/2+26, sy); sy+=9;
-    });
+    const specGridOpts = { labelColor:grayTx, valueColor:white, fontLabel:6, fontValue:7.5, rowPad:6.5 };
+    const specGridH = _pdfDetailGridHeight(doc, W-28, specRows, specGridOpts);
+    const specH = 15 + specGridH;
+    doc.setFillColor(...cardBg); doc.roundedRect(14,y,W-28,specH,3,3,'F');
+    doc.setDrawColor(...gold); doc.setLineWidth(0.4); doc.roundedRect(14,y,W-28,specH,3,3,'S');
+    doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(...gold); doc.text('SHIPMENT SPECIFICATIONS',20,y+8);
+    doc.setDrawColor(...gold); doc.setLineWidth(0.2); doc.line(14,y+11,W-14,y+11);
+    _pdfDetailGrid(doc, 14, y+18, W-28, specRows, specGridOpts);
 
-    y += 48;
+    y += specH + 6;
 
     // ── Security verification ──
     doc.setFillColor(...cardBg); doc.roundedRect(14,y,W-28,24,3,3,'F');
@@ -1377,7 +1492,7 @@ function generatePdfMinimal(id) {
 }
 
 // --- PDF 4: Premium Receipt ---
-function generatePdfReceipt(id) {
+async function generatePdfReceipt(id) {
     const s = currentShipments.find(sh => sh.id === id);
     if (!s) return;
     const { jsPDF } = window.jspdf;
@@ -1392,6 +1507,7 @@ function generatePdfReceipt(id) {
     const muted  = [110,110,130];
     const divC   = [210,210,225];
     const sc = _pdfStampColor(s.status), sl = _pdfStampLabel(s.status);
+    const logoData = await _pdfGetLogo();
 
     // ── Background ──
     doc.setFillColor(...offWht); doc.rect(0,0,W,H,'F');
@@ -1413,10 +1529,12 @@ function generatePdfReceipt(id) {
     doc.setFillColor(...gold); doc.rect(0,32,W,2,'F');
 
     // Logo
-    doc.setFontSize(26); doc.setFont('helvetica','bold'); doc.setTextColor(...white);
-    doc.text('VELORIX', 14, 18);
+    const logoW = _pdfDrawLogo(doc, logoData, 14, 8, 15, true);
+    const nameX = logoData ? 14+logoW+6 : 14;
+    doc.setFontSize(22); doc.setFont('helvetica','bold'); doc.setTextColor(...white);
+    doc.text('VELORIX', nameX, 18);
     doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...gold);
-    doc.text('LOGISTICS SERVICES', 14, 26);
+    doc.text('LOGISTICS SERVICES', nameX, 26);
 
     // Contact right
     doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(200,210,230);
