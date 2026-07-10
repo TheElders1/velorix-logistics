@@ -828,7 +828,7 @@ document.getElementById('edit-shipment-form').addEventListener('submit', async f
     // Insert whenever ANY of the optional history fields were filled in (not just status text/note).
     let historyError = null;
     if (historyStatusText || historyNote || historyProgress || historyDate) {
-        const result = await sb.from('tracking_history').insert([{
+        const historyRow = {
             shipment_id: id,
             status: historyStatusText || payload.status,
             location: historyDate || null,
@@ -836,7 +836,16 @@ document.getElementById('edit-shipment-form').addEventListener('submit', async f
             lng: payload.current_lng,
             note: historyNote || null,
             progress_percent: historyProgress ? parseInt(historyProgress, 10) : null
-        }]);
+        };
+        let result = await sb.from('tracking_history').insert([historyRow]);
+        // If the DB is missing the progress_percent column, retry without it so the rest still saves.
+        if (result.error && /progress_percent/i.test(result.error.message)) {
+            delete historyRow.progress_percent;
+            result = await sb.from('tracking_history').insert([historyRow]);
+            if (!result.error) {
+                result.error = { message: 'Saved, but the "progress_percent" column is missing from your tracking_history table — run: ALTER TABLE tracking_history ADD COLUMN progress_percent integer; in the Supabase SQL editor to enable the progress bar.' };
+            }
+        }
         historyError = result.error;
     }
 
