@@ -1442,7 +1442,8 @@ function generatePdfReceipt(id) {
     var cellW = W/3;
     strip.forEach(function(cell, i) {
         var cx = i * cellW;
-        doc.setFillColor(i%2===0 ? ...navy : [20,55,105]);
+        var cellColor = i%2===0 ? navy : [20,55,105];
+        doc.setFillColor(cellColor[0], cellColor[1], cellColor[2]);
         doc.rect(cx,48,cellW,16,'F');
         doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...gold);
         doc.text(cell.label, cx+cellW/2, 54, {align:'center'});
