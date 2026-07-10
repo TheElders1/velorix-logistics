@@ -1435,14 +1435,20 @@ async function generatePdfMinimal(id) {
     }
     doc.restoreGraphicsState();
 
-    // ── Header ──
+    // ── Header (logo already contains the VELORIX wordmark, so give it room and don't duplicate the name) ──
     doc.setDrawColor(...gold); doc.setLineWidth(0.6); doc.line(14,14,W-14,14);
-    const logoW = _pdfDrawLogo(doc, logoData, 14, 16, 10, true);
-    const nameX = logoData ? 14+logoW+6 : 14;
-    doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(...gold);
-    doc.text('VELORIX', nameX, 24);
-    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(...grayTx);
-    doc.text('LOGISTICS SERVICES  |  www.velorixlogistics.com  |  support@velorixlogistics.com', nameX, 30);
+    const logoH = 15.5, logoY = 14 + (20-logoH)/2;
+    const logoW = _pdfDrawLogo(doc, logoData, 14, logoY, logoH, true);
+    const nameX = logoData ? 14+logoW+7 : 14;
+    if (!logoData) {
+        doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(...gold);
+        doc.text('VELORIX', nameX, 24);
+    }
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(...gold);
+    doc.text('LOGISTICS SERVICES', nameX, logoData ? 22 : 30);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...grayTx);
+    doc.text('www.velorixlogistics.com  |  support@velorixlogistics.com', nameX, logoData ? 27.5 : 34.5);
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal');
     doc.text('+1 800 VELORIX  |  +40  |  +33  |  Bucharest, Romania', W-14, 24, {align:'right'});
     doc.setDrawColor(...gold); doc.line(14,34,W-14,34);
 
@@ -1497,7 +1503,7 @@ async function generatePdfMinimal(id) {
     // ── Specifications table (dynamic height, wrapped values) ──
     const specRows=[
         ['Weight',s.weight_kg?s.weight_kg+' kg':'—','Package Type',s.package_type||'—'],
-        ['Description',s.description||'—','Route',(s.origin||'—')+' → '+(s.destination||'—')],
+        ['Description',s.description||'—','Route',(s.origin||'—')+'  ->  '+(s.destination||'—')],
         ['Carrier','Velorix Logistics Services','Shipping Method','Express Logistics'],
     ];
     const specGridOpts = { labelColor:grayTx, valueColor:white, fontLabel:6, fontValue:7.5, rowPad:6.5 };
