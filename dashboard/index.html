@@ -328,6 +328,8 @@
 
                             <hr>
                             <h6 class="text-muted">Live location &amp; status (optional at creation)</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary mb-2" id="add-geocode-btn">📍 Auto-fill coordinates from Origin/Destination</button>
+                            <small class="vlx-field-help d-block mb-2">Looks up the Origin and Destination text above and fills in the lat/lng fields automatically — no need to search for coordinates manually.</small>
                             <div class="form-row">
                                 <div class="col-md-3 form-group">
                                     <label>Origin Lat</label>
@@ -483,6 +485,7 @@
                         <div class="col-md-6 form-group"><label>Origin</label><input type="text" class="form-control" name="origin"></div>
                         <div class="col-md-6 form-group"><label>Destination</label><input type="text" class="form-control" name="destination"></div>
                     </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary mb-2" id="edit-geocode-btn">📍 Auto-fill coordinates from Origin/Destination</button>
                     <div class="form-row">
                         <div class="col-md-3 form-group"><label>Origin Lat</label><input type="number" step="any" class="form-control" name="origin_lat"></div>
                         <div class="col-md-3 form-group"><label>Origin Lng</label><input type="number" step="any" class="form-control" name="origin_lng"></div>
@@ -726,6 +729,67 @@ document.getElementById('shipment-search').addEventListener('input', function() 
     const q = this.value.trim().toLowerCase();
     const filtered = currentShipments.filter(s => s.tracking_number.toLowerCase().includes(q));
     renderShipments(filtered);
+});
+
+// --- Geocoding: turn an address/city string into lat/lng using OpenStreetMap Nominatim (free, no API key) ---
+async function geocodeAddress(query) {
+    if (!query || !query.trim()) return null;
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) return null;
+    const results = await res.json();
+    if (!results || !results.length) return null;
+    return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
+}
+
+async function runGeocodeForForm(form, btn) {
+    const originText = form.origin.value.trim();
+    const destText = form.destination.value.trim();
+    if (!originText && !destText) {
+        swal('Nothing to look up', 'Fill in the Origin and/or Destination fields first.', 'info');
+        return;
+    }
+    const originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Looking up...';
+
+    const misses = [];
+    try {
+        if (originText) {
+            const o = await geocodeAddress(originText);
+            if (o) { form.origin_lat.value = o.lat; form.origin_lng.value = o.lng; }
+            else misses.push('Origin ("' + originText + '")');
+        }
+        if (destText) {
+            // Nominatim rate limit is 1 req/sec — small delay between lookups
+            await new Promise(r => setTimeout(r, 1100));
+            const d = await geocodeAddress(destText);
+            if (d) { form.destination_lat.value = d.lat; form.destination_lng.value = d.lng; }
+            else misses.push('Destination ("' + destText + '")');
+        }
+        // Default the "current" position to the origin, if current is still empty
+        if (form.current_lat && !form.current_lat.value && form.origin_lat.value) {
+            form.current_lat.value = form.origin_lat.value;
+            form.current_lng.value = form.origin_lng.value;
+        }
+        if (misses.length) {
+            swal('Partial match', 'Could not find coordinates for: ' + misses.join(', ') + '. Try a more specific address (e.g. add country).', 'warning');
+        } else {
+            swal('Done', 'Coordinates filled in.', 'success');
+        }
+    } catch (err) {
+        swal('Lookup failed', 'Could not reach the geocoding service. Check your connection and try again.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+    }
+}
+
+document.getElementById('add-geocode-btn').addEventListener('click', function() {
+    runGeocodeForForm(document.getElementById('add-shipment-form'), this);
+});
+document.getElementById('edit-geocode-btn').addEventListener('click', function() {
+    runGeocodeForForm(document.getElementById('edit-shipment-form'), this);
 });
 
 // --- Add shipment ---
