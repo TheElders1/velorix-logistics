@@ -377,6 +377,22 @@
                                     <input type="text" class="form-control" name="package_type" placeholder="e.g. Parcel">
                                 </div>
                             </div>
+                            <div class="form-row">
+                                <div class="col-md-6 form-group">
+                                    <label>Shipment Amount</label>
+                                    <input type="number" step="any" min="0" class="form-control" name="shipment_amount" placeholder="e.g. 4500">
+                                    <small class="vlx-field-help">Declared value shown on the PDF receipt (optional)</small>
+                                </div>
+                                <div class="col-md-6 form-group">
+                                    <label>Currency</label>
+                                    <select class="form-control" name="shipment_currency">
+                                        <option value="USD" selected>USD ($)</option>
+                                        <option value="EUR">EUR (€)</option>
+                                        <option value="GBP">GBP (£)</option>
+                                        <option value="NGN">NGN (₦)</option>
+                                    </select>
+                                </div>
+                            </div>
 
                             <div class="vlx-form-actions">
                                 <button type="submit" class="btn-save-shipment" id="add-shipment-btn">Save Shipment</button>
@@ -492,6 +508,21 @@
                     <div class="form-row">
                         <div class="col-md-6 form-group"><label>Shipment Date</label><input type="date" class="form-control" name="shipment_date"></div>
                         <div class="col-md-6 form-group"><label>Shipment Comments</label><input type="text" class="form-control" name="shipment_comments"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="col-md-6 form-group">
+                            <label>Shipment Amount</label>
+                            <input type="number" step="any" min="0" class="form-control" name="shipment_amount" placeholder="e.g. 4500">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Currency</label>
+                            <select class="form-control" name="shipment_currency">
+                                <option value="USD">USD ($)</option>
+                                <option value="EUR">EUR (€)</option>
+                                <option value="GBP">GBP (£)</option>
+                                <option value="NGN">NGN (₦)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <hr>
@@ -717,7 +748,7 @@ document.getElementById('add-shipment-form').addEventListener('submit', async fu
         payload[key] = value === '' ? null : value;
     });
 
-    ['origin_lat','origin_lng','destination_lat','destination_lng','current_lat','current_lng','weight_kg'].forEach(k => {
+    ['origin_lat','origin_lng','destination_lat','destination_lng','current_lat','current_lng','weight_kg','shipment_amount'].forEach(k => {
         if (payload[k] !== null) payload[k] = parseFloat(payload[k]);
     });
 
@@ -771,7 +802,7 @@ const EDIT_FIELDS = [
     'description','weight_kg','package_type','origin','destination',
     'origin_lat','origin_lng','destination_lat','destination_lng',
     'current_lat','current_lng','status','estimated_delivery',
-    'shipment_date','shipment_comments'
+    'shipment_date','shipment_comments','shipment_amount','shipment_currency'
 ];
 
 function openEditModal(id) {
@@ -811,7 +842,7 @@ document.getElementById('edit-shipment-form').addEventListener('submit', async f
         const val = fd.get(key);
         payload[key] = (val === '' || val === null) ? null : val;
     });
-    ['weight_kg','origin_lat','origin_lng','destination_lat','destination_lng','current_lat','current_lng'].forEach(function(k) {
+    ['weight_kg','shipment_amount','origin_lat','origin_lng','destination_lat','destination_lng','current_lat','current_lng'].forEach(function(k) {
         if (payload[k] !== null) payload[k] = parseFloat(payload[k]);
     });
 
@@ -916,6 +947,9 @@ function _pdfStampLabel(status) {
     if (st.includes('delivered')) return 'DELIVERED';
     if (st.includes('transit')) return 'IN TRANSIT';
     return 'DISPATCHED';
+}
+function _pdfCurrencySymbol(code) {
+    return { USD:'$', EUR:'€', GBP:'£', NGN:'₦' }[code] || (code ? code+' ' : '$');
 }
 function _pdfTerms() {
     return 'Any shortage or damage to goods must be reported to Velorix Logistics within 72 hours of delivery. ' +
@@ -1219,7 +1253,7 @@ async function generatePdfClassic(id) {
     const dItems = [
         ['Description', s.description||'—',       'Weight',       s.weight_kg?s.weight_kg+' kg':'—'],
         ['Package Type', s.package_type||'—',      'Dimensions',   '—'],
-        ['Shipping Method', 'Express Logistics',   'Declared Value', s.shipment_amount?'$'+s.shipment_amount:'—'],
+        ['Shipping Method', 'Express Logistics',   'Declared Value', s.shipment_amount?_pdfCurrencySymbol(s.shipment_currency)+s.shipment_amount:'—'],
         ['Insurance', '—',                         'Reference No.', s.tracking_number||'—'],
     ];
     const gridOpts = { labelColor:muted, valueColor:body };
@@ -1362,7 +1396,7 @@ async function generatePdfModern(id) {
     const sdItems=[
         ['Description',s.description||'—','Weight',s.weight_kg?s.weight_kg+' kg':'—'],
         ['Package Type',s.package_type||'—','Dimensions','—'],
-        ['Shipping Method','Express Logistics','Declared Value',s.shipment_amount?'$'+s.shipment_amount:'—'],
+        ['Shipping Method','Express Logistics','Declared Value',s.shipment_amount?_pdfCurrencySymbol(s.shipment_currency)+s.shipment_amount:'—'],
         ['Insurance','—','Reference No.',s.tracking_number||'—'],
     ];
     const sdGridOpts = { labelColor:muted, valueColor:body };
@@ -1487,7 +1521,7 @@ async function generatePdfMinimal(id) {
     const panels=[
         {title:'SENDER',   color:eBlue,  fields:[{label:'Name',value:s.sender_name},{label:'Address',value:s.sender_address},{label:'Email',value:s.sender_email},{label:'Phone',value:s.sender_phone}]},
         {title:'RECEIVER', color:gold,   fields:[{label:'Name',value:s.receiver_name},{label:'Address',value:s.receiver_address},{label:'Email',value:s.receiver_email},{label:'Phone',value:s.receiver_phone}]},
-        {title:'SHIPMENT', color:[212,100,55], fields:[{label:'Origin',value:s.origin},{label:'Destination',value:s.destination},{label:'Package Type',value:s.package_type},{label:'Weight',value:s.weight_kg?s.weight_kg+' kg':'—'}]},
+        {title:'SHIPMENT', color:[212,100,55], fields:[{label:'Origin',value:s.origin},{label:'Destination',value:s.destination},{label:'Package Type',value:s.package_type},{label:'Weight',value:s.weight_kg?s.weight_kg+' kg':'—'},{label:'Declared Value',value:s.shipment_amount?_pdfCurrencySymbol(s.shipment_currency)+s.shipment_amount+' '+(s.shipment_currency||'USD'):'—'}]},
     ];
     const panBottoms = panels.map(function(p,i) {
         const px=14+i*(panW+5);
@@ -1700,7 +1734,7 @@ async function generatePdfReceipt(id) {
     var senderBottom = drawPartyCard('SENDER INFORMATION', s.sender_name, [
         {label:'ADDRESS', value: s.sender_address},
         {label:'ORIGIN CITY', value: s.origin},
-        {label:'AMOUNT (USD)', value: s.shipment_amount ? String(s.shipment_amount) : null}
+        {label:'AMOUNT', value: s.shipment_amount ? _pdfCurrencySymbol(s.shipment_currency)+s.shipment_amount+' '+(s.shipment_currency||'USD') : null}
     ], lx, cardTop);
 
     var receiverBottom = drawPartyCard('RECEIVER INFORMATION', s.receiver_name, [
