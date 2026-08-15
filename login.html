@@ -93,20 +93,17 @@ document.getElementById('login-form').addEventListener('submit', async function(
     <script src="dashboard/jquery.js"></script>
     <script src="dashboard/popper.js"></script>
     <script src="dashboard/bootstrap.min.js"></script>
-    <script type="application/javascript">
-      window.tiledeskSettings= 
-      {
-          projectid: "6a803206750ae700139ee947"
-      };
-      (function(d, s, id) { 
-          var w=window; var d=document; var i=function(){i.c(arguments);};
-          i.q=[]; i.c=function(args){i.q.push(args);}; w.Tiledesk=i;                    
-          var js, fjs=d.getElementsByTagName(s)[0];
-          if (d.getElementById(id)) return;
-          js=d.createElement(s); 
-          js.id=id; js.async=true; js.src="https://widget.tiledesk.com/v6/launch.js";
-          fjs.parentNode.insertBefore(js, fjs);
-      }(document,'script','tiledesk-jssdk'));
-  </script>
+   <!-- Smartsupp Live Chat script -->
+<script type="text/javascript">
+var _smartsupp = _smartsupp || {};
+_smartsupp.key = '07f7b8a08e64030a79d8675c6277d4a47717d17a';
+window.smartsupp||(function(d) {
+  var s,c,o=smartsupp=function(){ o._.push(arguments)};o._=[];
+  s=d.getElementsByTagName('script')[0];c=d.createElement('script');
+  c.type='text/javascript';c.charset='utf-8';c.async=true;
+  c.src='https://www.smartsuppchat.com/loader.js?';s.parentNode.insertBefore(c,s);
+})(document);
+</script>
+<noscript>Powered by <a href="https://www.smartsupp.com" target="_blank">Smartsupp</a></noscript>
 
 </body></html>
